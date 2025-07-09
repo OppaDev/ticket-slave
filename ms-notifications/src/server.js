@@ -1,46 +1,50 @@
 require('dotenv').config();
 const app = require('./app');
 const { sequelize } = require('./api/models');
+const consumerService = require('./api/services/consumer.service');
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 
-// Función para inicializar el servidor
 const startServer = async () => {
     try {
-        // Verificar conexión a la base de datos
         await sequelize.authenticate();
         console.log('✅ Conexión a la base de datos establecida correctamente');
 
-        // Sincronizar modelos (solo en desarrollo)
         if (process.env.NODE_ENV === 'development') {
             await sequelize.sync({ alter: true });
-            console.log('📊 Modelos sincronizados con la base de datos');
+            console.log('📊 Modelos de logs de notificación sincronizados');
         }
 
-        // Iniciar servidor
+        // Iniciar el consumidor de RabbitMQ
+        await consumerService.start();
+
         const server = app.listen(PORT, () => {
-            console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
+            console.log(`🚀 Servidor de Notificaciones corriendo en puerto ${PORT}`);
             console.log(`📱 Entorno: ${process.env.NODE_ENV}`);
-            console.log(`🌍 URL: http://localhost:${PORT}`);
+            console.log(`🌍 URL Health Check: http://localhost:${PORT}/health`);
         });
 
         // Manejo de cierre graceful
-        process.on('SIGTERM', async () => {
-            console.log('🔄 Cerrando servidor...');
-            await sequelize.close();
+        const gracefulShutdown = async () => {
+            console.log('🔄 Cerrando servicios...');
             server.close(() => {
-                console.log('✅ Servidor cerrado correctamente');
-                process.exit(0);
+                console.log('✅ Servidor HTTP cerrado.');
+                sequelize.close().then(() => {
+                    console.log('🔌 Conexión a la base de datos cerrada.');
+                    process.exit(0);
+                });
             });
-        });
+        };
+
+        process.on('SIGTERM', gracefulShutdown);
+        process.on('SIGINT', gracefulShutdown);
 
     } catch (error) {
-        console.error('❌ Error al iniciar el servidor:', error);
+        console.error('❌ Error fatal al iniciar el servidor de notificaciones:', error);
         process.exit(1);
     }
 };
 
-// Iniciar servidor solo si no estamos en modo test
 if (process.env.NODE_ENV !== 'test') {
     startServer();
 }

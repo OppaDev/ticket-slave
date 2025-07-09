@@ -54,15 +54,15 @@ services:
       # Habilitar Kong Manager (interfaz web oficial)
       KONG_ADMIN_GUI_LISTEN: 0.0.0.0:8002
       KONG_ADMIN_GUI_URL: http://localhost:8002
-    # Opcional: usar configuración declarativa
-      # KONG_DECLARATIVE_CONFIG: /kong/declarative/kong.yml
+      # Configuración declarativa
+      KONG_DECLARATIVE_CONFIG: /kong/declarative/kong.yml
     ports:
       - "8000:8000"  # Puerto del proxy
       - "8001:8001"  # Puerto del admin API
       - "8002:8002"  # Puerto de Kong Manager (interfaz web)
-    # Opcional: montar archivo de configuración
-    # volumes:
-    #   - ./kong.yml:/kong/declarative/kong.yml
+    # Montar archivo de configuración
+    volumes:
+      - ./kong.yml:/kong/declarative/kong.yml
     networks:
       - kong-net
     healthcheck:
@@ -71,7 +71,6 @@ services:
       timeout: 10s
       retries: 10
   # Kong Manager estará disponible en http://localhost:8002
-  # No necesitamos Konga porque Kong Manager es la interfaz oficial
 volumes:
   kong_data:
 
