@@ -1,7 +1,7 @@
 const express = require('express');
 const helmet = require('helmet');
 const compression = require('compression');
-const morgan = a('morgan');
+const morgan = require('morgan');
 
 module.exports = (app) => {
     // Seguridad básica
