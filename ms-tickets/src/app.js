@@ -26,7 +26,7 @@ app.get('/health', (req, res) => {
 
 // Rutas de la API
 const apiRoutes = require('./api/routes');
-app.use('/', apiRoutes);
+app.use('/api/v1', apiRoutes);
 
 // Middleware para rutas no encontradas
 app.use('*', (req, res) => {

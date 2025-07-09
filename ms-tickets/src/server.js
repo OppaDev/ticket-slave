@@ -1,6 +1,7 @@
 require('dotenv').config();
 const app = require('./app');
 const { sequelize } = require('./api/models');
+const publisherService = require('./api/services/publisher.service');
 
 const PORT = process.env.PORT || 3000;
 
@@ -18,6 +19,7 @@ const startServer = async () => {
         }
 
         // Iniciar servidor
+        await publisherService.start();
         const server = app.listen(PORT, () => {
             console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
             console.log(`📱 Entorno: ${process.env.NODE_ENV}`);

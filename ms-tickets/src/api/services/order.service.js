@@ -3,6 +3,7 @@ const { sequelize, Cart, CartItem, Order, OrderItem, TicketType } = require('../
 const { NotFoundError, ConflictError, BadRequestError } = require('../../utils/errors');
 const cartService = require('./cart.service'); // Reutilizamos el servicio de carrito
 const ticketService = require('./ticket.service');
+const publisherService = require('./publisher.service');
 
 // Simulación de un servicio de pasarela de pago
 const paymentGatewayService = {
@@ -91,6 +92,17 @@ class OrderService {
 
             // En un sistema real, aquí se emitiría un evento para el microservicio de tickets/notificaciones
             // para generar los tickets QR y enviarlos al usuario.
+            const eventPayload = {
+                userEmail: user.email,
+                userName: paymentDetails.billingAddress.nombreCompleto,
+                orderDetails: {
+                    id: order.id,
+                    codigoPedido: order.orderCode,
+                    totalAmount: parseFloat(order.totalAmount),
+                    currency: order.currency
+                }
+            };
+            await publisherService.publishMessage('purchase.completed', eventPayload);
 
             return {
                 id: order.id,
