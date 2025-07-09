@@ -31,11 +31,14 @@ Order.init({
         type: DataTypes.STRING(3),
         allowNull: false,
         field: 'currency',
-    },
+    }, 
     status: {
-        type: DataTypes.ENUM('COMPLETED', 'PENDING', 'FAILED', 'REFUNDED'),
+        type: DataTypes.STRING,
         allowNull: false,
         defaultValue: 'PENDING',
+        validate: {
+            isIn: [['COMPLETED', 'PENDING', 'FAILED', 'REFUNDED']],
+        },
     },
     paymentGatewayId: {
         type: DataTypes.STRING,

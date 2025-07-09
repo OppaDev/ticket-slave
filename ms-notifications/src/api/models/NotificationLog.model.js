@@ -2,7 +2,7 @@
 const { DataTypes, Model } = require('sequelize');
 const { sequelize } = require('../../config/database');
 
-class NotificationLog extends Model {}
+class NotificationLog extends Model { }
 
 NotificationLog.init({
     id: {
@@ -11,8 +11,11 @@ NotificationLog.init({
         primaryKey: true,
     },
     channel: {
-        type: DataTypes.ENUM('EMAIL', 'PUSH', 'SMS'),
+        type: DataTypes.STRING,
         allowNull: false,
+        validate: {
+            isIn: [['EMAIL', 'PUSH', 'SMS']],
+        },
     },
     recipient: {
         type: DataTypes.STRING,
@@ -23,8 +26,11 @@ NotificationLog.init({
         allowNull: false,
     },
     status: {
-        type: DataTypes.ENUM('SENT', 'FAILED', 'PENDING'),
+        type: DataTypes.STRING,
         allowNull: false,
+        validate: {
+            isIn: [['SENT', 'FAILED', 'PENDING']],
+        },
     },
     content: {
         type: DataTypes.JSONB, // Contenido del mensaje enviado

@@ -13,7 +13,7 @@ services:
     read_timeout: 60000
     write_timeout: 60000
     retries: 3
-    
+
     routes:
       # --- Rutas de tickets (cart, orders, tickets) ---
       - name: route-tickets-cart
@@ -27,7 +27,7 @@ services:
           - DELETE
           - PATCH
           - OPTIONS
-        
+
       - name: route-tickets-orders
         paths:
           - /api/v1/ticketslave/orders
@@ -39,7 +39,7 @@ services:
           - DELETE
           - PATCH
           - OPTIONS
-          
+
       - name: route-tickets-tickets
         paths:
           - /api/v1/ticketslave/tickets
@@ -60,7 +60,7 @@ services:
     read_timeout: 30000
     write_timeout: 30000
     retries: 3
-    
+
     routes:
       # --- Rutas de autenticación ---
       - name: route-users-auth
@@ -74,7 +74,7 @@ services:
           - DELETE
           - PATCH
           - OPTIONS
-          
+
       # --- Rutas de usuarios ---
       - name: route-users-users
         paths:
@@ -87,7 +87,7 @@ services:
           - DELETE
           - PATCH
           - OPTIONS
-          
+
       # --- Rutas de roles ---
       - name: route-users-roles
         paths:
@@ -100,7 +100,7 @@ services:
           - DELETE
           - PATCH
           - OPTIONS
-          
+
       # --- Rutas de permisos ---
       - name: route-users-permissions
         paths:
@@ -122,7 +122,7 @@ services:
     read_timeout: 30000
     write_timeout: 30000
     retries: 3
-    
+
     routes:
       # --- Rutas de eventos ---
       - name: route-events-events
@@ -136,7 +136,7 @@ services:
           - DELETE
           - PATCH
           - OPTIONS
-          
+
       # --- Rutas de categorías ---
       - name: route-events-categories
         paths:
@@ -149,7 +149,7 @@ services:
           - DELETE
           - PATCH
           - OPTIONS
-          
+
       # --- Rutas de venues ---
       - name: route-events-venues
         paths:
@@ -162,7 +162,7 @@ services:
           - DELETE
           - PATCH
           - OPTIONS
-          
+
       # --- Rutas de tipos de ticket (anidadas) ---
       - name: route-tickets-ticket-types
         paths:
