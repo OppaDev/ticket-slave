@@ -10,7 +10,7 @@ config.cors(app);
 // Rutas principales
 app.get('/status', (req, res) => {
     res.json({
-        message: 'Microservicio funcionando correctamente',
+        message: 'Microservicio funcionando correctamente TICKETS',
         timestamp: new Date().toISOString(),
         version: '1.0.0'
     });

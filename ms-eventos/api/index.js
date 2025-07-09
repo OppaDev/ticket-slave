@@ -37,6 +37,14 @@ app.use(boomErrorHandler);
 app.use(sequelizeHandler);
 app.use(errorHandler);
 
+app.get('/status', (req, res) => {
+    res.json({
+        message: 'Microservicio funcionando correctamente EVENTOS',
+        timestamp: new Date().toISOString(),
+        version: '1.0.0'
+    });
+});
+
 app.listen(port, () => {
   console.log(`Server is running on port http://localhost:${port}/`);
 });
