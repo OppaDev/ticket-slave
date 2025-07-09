@@ -19,7 +19,7 @@ const paymentGatewayService = {
 
 class OrderService {
 
-    async createOrderFromCart(userId, paymentDetails) {
+    async createOrderFromCart(userId, paymentDetails, userEmail) {
         const transaction = await sequelize.transaction();
         try {
             // 1. Obtener el carrito del usuario y validar que no esté vacío o expirado
@@ -87,24 +87,11 @@ class OrderService {
             // 6. Vaciar el carrito
             await CartItem.destroy({ where: { cartId: cart.id }, transaction });
 
-            // Si todo fue exitoso, confirmar la transacción
+            // Si todo fue exitoso hasta aquí, confirmar la transacción
             await transaction.commit();
 
-            // En un sistema real, aquí se emitiría un evento para el microservicio de tickets/notificaciones
-            // para generar los tickets QR y enviarlos al usuario.
-            const eventPayload = {
-                userEmail: user.email,
-                userName: paymentDetails.billingAddress.nombreCompleto,
-                orderDetails: {
-                    id: order.id,
-                    codigoPedido: order.orderCode,
-                    totalAmount: parseFloat(order.totalAmount),
-                    currency: order.currency
-                }
-            };
-            await publisherService.publishMessage('purchase.completed', eventPayload);
-
-            return {
+            // Preparar datos para retornar
+            const orderResponse = {
                 id: order.id,
                 codigoPedido: order.orderCode,
                 estado: order.status,
@@ -112,8 +99,34 @@ class OrderService {
                 mensaje: '¡Gracias por tu compra! Tus entradas han sido generadas.'
             };
 
+            // Intentar enviar evento de notificación (no crítico, la orden ya fue creada)
+            try {
+                // En un sistema real, aquí se emitiría un evento para el microservicio de tickets/notificaciones
+                // para generar los tickets QR y enviarlos al usuario.
+                const eventPayload = {
+                    userEmail: userEmail, // Ahora incluimos el email del usuario
+                    userName: paymentDetails.billingAddress.nombreCompleto,
+                    orderDetails: {
+                        id: order.id,
+                        codigoPedido: order.orderCode,
+                        totalAmount: parseFloat(order.totalAmount),
+                        currency: order.currency
+                    }
+                };
+                await publisherService.publishMessage('purchase.completed', eventPayload);
+            } catch (notificationError) {
+                // Log del error pero no fallar la operación ya que la orden se creó exitosamente
+                console.error('Error enviando notificación de compra completada:', notificationError);
+                // Opcionalmente, podrías agregar aquí lógica para reintento posterior
+            }
+
+            return orderResponse;
+
         } catch (error) {
-            await transaction.rollback();
+            // Solo hacer rollback si la transacción no ha sido committeada
+            if (!transaction.finished) {
+                await transaction.rollback();
+            }
             throw error;
         }
     }

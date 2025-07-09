@@ -4,7 +4,7 @@ const ticketService = require('../services/ticket.service');
 class TicketController {
   async getAll(req, res, next) {
     try {
-      const userId = req.user.id;
+      const userId = req.user.sub; // Usar 'sub' del JWT decodificado
       const { eventId, status } = req.query;
       const tickets = await ticketService.findUserTickets(userId, { eventId, status });
       res.status(200).json({ data: tickets });
@@ -15,7 +15,7 @@ class TicketController {
 
   async getOne(req, res, next) {
     try {
-      const userId = req.user.id;
+      const userId = req.user.sub; // Usar 'sub' del JWT decodificado
       const { id } = req.params;
       const ticket = await ticketService.findTicketById(userId, id);
       res.status(200).json(ticket);

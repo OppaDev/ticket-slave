@@ -5,7 +5,8 @@ class OrderController {
     async create(req, res, next) {
         try {
             const userId = req.user.sub; // Usar 'sub' del JWT decodificado
-            const orderDetails = await orderService.createOrderFromCart(userId, req.body);
+            const userEmail = req.user.email; // Obtener email del JWT
+            const orderDetails = await orderService.createOrderFromCart(userId, req.body, userEmail);
             res.status(201).json(orderDetails);
         } catch (error) {
             next(error);
