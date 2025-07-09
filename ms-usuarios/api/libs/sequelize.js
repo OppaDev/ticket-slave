@@ -12,6 +12,7 @@ const PORT = encodeURIComponent(config.dbPort);
 const IS_PROD = encodeURIComponent(config.isProd);
 
 // const URI = `postgres://${USER}:${PASSWORD}@${HOST}:${PORT}/${DB_NAME}`;
+// const URI = `postgresql://localhost:26257/ms_usuarios?user=root&password=`;
 
 let URI = '';
 
@@ -28,6 +29,9 @@ if (IS_PROD === 'true') {
 } else {
   URI = `postgres://${USER}:${PASSWORD}@${HOST}:${PORT}/${DB_NAME}`;
 }
+console.log('=======================================================')
+console.log('URI:', URI);
+console.log('=======================================================')
 
 const sequelize = new Sequelize(URI, options);
 

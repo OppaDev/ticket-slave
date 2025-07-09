@@ -1,0 +1,90 @@
+version: '3.8'
+
+services:
+  # Nodo 1 - Líder
+  cockroach1:
+    image: cockroachdb/cockroach:latest
+    container_name: crdb-node1
+    hostname: crdb-node1
+    networks:
+      roach-net:
+        ipv4_address: 172.20.0.2  # IP fija para evitar problemas de DNS
+    ports:
+      - "26257:26257"  # SQL
+      - "8080:8080"    # UI
+    volumes:
+      - cockroach1:/cockroach/cockroach-data
+    command: start --insecure --store=/cockroach/cockroach-data --listen-addr=0.0.0.0:26257 --http-addr=0.0.0.0:8080 --advertise-addr=crdb-node1:26257 --join=crdb-node1:26257,crdb-node2:26257,crdb-node3:26257
+
+  # Nodo 2 - Réplica
+  cockroach2:
+    image: cockroachdb/cockroach:latest
+    container_name: crdb-node2
+    hostname: crdb-node2
+    networks:
+      roach-net:
+        ipv4_address: 172.20.0.3
+    ports:
+      - "26258:26257"  # SQL
+      - "8081:8080"    # UI
+    volumes:
+      - cockroach2:/cockroach/cockroach-data
+    command: start --insecure --store=/cockroach/cockroach-data --listen-addr=0.0.0.0:26257 --http-addr=0.0.0.0:8080 --advertise-addr=crdb-node2:26257 --join=crdb-node1:26257,crdb-node2:26257,crdb-node3:26257
+
+  # Nodo 3 - Réplica
+  cockroach3:
+    image: cockroachdb/cockroach:latest
+    container_name: crdb-node3
+    hostname: crdb-node3
+    networks:
+      roach-net:
+        ipv4_address: 172.20.0.4
+    ports:
+      - "26259:26257"  # SQL
+      - "8082:8080"    # UI
+    volumes:
+      - cockroach3:/cockroach/cockroach-data
+    command: start --insecure --store=/cockroach/cockroach-data --listen-addr=0.0.0.0:26257 --http-addr=0.0.0.0:8080 --advertise-addr=crdb-node3:26257 --join=crdb-node1:26257,crdb-node2:26257,crdb-node3:26257
+
+  # Inicializador del clúster (se ejecuta una vez)
+  roach-init:
+    image: cockroachdb/cockroach:latest
+    container_name: roach-init
+    networks:
+      - roach-net
+    depends_on:
+      - cockroach1
+      - cockroach2
+      - cockroach3
+    command: init --insecure --host=crdb-node1:26257
+
+  # RabbitMQ
+  rabbitmq:
+    image: rabbitmq:3.12-management
+    container_name: rabbitmq
+    hostname: rabbitmq
+    ports:
+      - "5672:5672"   # AMQP
+      - "15672:15672" # Management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: password
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - roach-net
+
+# Red personalizada con subnet fija
+networks:
+  roach-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+# Volúmenes para persistencia
+volumes:
+  cockroach1:
+  cockroach2:
+  cockroach3:
+  rabbitmq_data:
