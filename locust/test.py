@@ -1,93 +1,235 @@
 import random
-from locust import HttpUser, task, between
+from locust import HttpUser, task, between, SequentialTaskSet
 
-# --- Datos de Prueba ---
-# Estos datos se basan en tu archivo de seeder (ms-usuarios/api/db/seeders/...)
-# Es crucial que estos usuarios y eventos existan en tu BBDD de pruebas.
+# ------------------------------------------------------------------------------
+# --- DATOS Y CONFIGURACIÓN DE PRUEBA ---
+# ------------------------------------------------------------------------------
+# Asegúrate de que estos usuarios existen en tu BBDD después de ejecutar los seeders.
 CUSTOMER_CREDENTIALS = {"email": "customer@test.com", "password": "password"}
-EVENT_IDS = [1, 2, 3]  # Asumiendo que los IDs de los eventos del seeder son 1, 2, y 3
-TICKET_TYPE_IDS_PER_EVENT = {
-    # Suponiendo que el seeder de eventos/tickets crea estos tipos de tickets.
-    # Necesitas verificar los IDs reales en tu base de datos después de ejecutar los seeders.
-    1: [1, 2], # TicketType IDs para el Evento 1
-    2: [3, 4], # TicketType IDs para el Evento 2
-    3: [5, 6]  # TicketType IDs para el Evento 3
-}
+ORGANIZER_CREDENTIALS = {"email": "organizer@test.com", "password": "password"}
 
+# El host es la URL de tu API Gateway Kong. Ajusta si es diferente.
+API_HOST = "http://localhost:8000"
 
-class TicketSlaveUser(HttpUser):
-    # El host es la URL de tu API Gateway Kong
-    host = "http://localhost:8000"
-    
-    # Simula un tiempo de espera entre 1 y 3 segundos entre tareas
-    wait_time = between(1, 3)
+class BaseApiUser(HttpUser):
+    """
+    Clase base para usuarios que necesitan autenticarse.
+    Maneja el login y almacena el token.
+    """
+    host = API_HOST
+    abstract = True  # Para que Locust no intente instanciar esta clase directamente.
 
-    def on_start(self):
-        """ Se ejecuta una vez por cada usuario virtual al inicio de la prueba. """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.token = None
+        self.headers = {}
 
-    @task(10) # <-- Tarea 1: Navegación (más frecuente)
-    def browse_events(self):
-        """
-        Simula a un usuario anónimo que navega por la lista de eventos.
-        Es una operación de solo lectura y alta frecuencia.
-        """
-        self.client.get("/api/v1/events", name="/api/v1/events (browse)")
-
-    @task(2) # <-- Tarea 2: Flujo de compra completo (menos frecuente pero más crítico)
-    def full_purchase_flow(self):
-        """
-        Simula el flujo completo de un usuario registrado que compra un ticket.
-        """
-        # 1. Iniciar Sesión
-        with self.client.post("/api/v1/auth/login", json=CUSTOMER_CREDENTIALS, name="/api/v1/auth/login") as response:
+    def login(self, credentials, user_type="User"):
+        """Realiza el login y guarda el token en self.token."""
+        with self.client.post("/api/v1/auth/login", json=credentials, name=f"/api/v1/auth/login ({user_type})") as response:
             if response.status_code == 200:
                 self.token = response.json().get("token")
+                self.headers = {"Authorization": f"Bearer {self.token}"}
             else:
-                response.failure(f"Failed to login with user {CUSTOMER_CREDENTIALS['email']}")
-                return # Detener el flujo si el login falla
+                response.failure(f"Failed to login for {user_type} with email {credentials['email']}")
+                self.token = None # Asegurarse de que no hay token si falla
+        return self.token
 
-        if not self.token:
-            return
+# ==============================================================================
+# --- TAREAS SECUENCIALES (User Journeys) ---
+# ==============================================================================
 
-        headers = {"Authorization": f"Bearer {self.token}"}
+class CustomerPurchaseFlow(SequentialTaskSet):
+    """
+    Simula el flujo de compra completo de un cliente, paso a paso.
+    """
+    def on_start(self):
+        """Se ejecuta al inicio de esta secuencia de tareas."""
+        self.event_id = None
+        self.ticket_type_id = None
 
-        # 2. Seleccionar un evento al azar
-        event_id = random.choice(EVENT_IDS)
-        
-        # 3. Ver los tipos de ticket para ese evento
-        with self.client.get(f"/api/v1/events/{event_id}/ticket-types", name="/api/v1/events/[eventId]/ticket-types") as response:
+    @task
+    def view_random_event(self):
+        with self.client.get("/api/v1/events?limit=20", name="/api/v1/events (get random)") as response:
             if response.status_code == 200 and response.json():
-                # Obtenemos un tipo de ticket real para este evento
-                available_ticket_types = response.json()
-                ticket_type_to_buy = random.choice(available_ticket_types)
-                ticket_type_id = ticket_type_to_buy['id']
+                events = response.json()
+                if events:
+                    self.event_id = random.choice(events)['id']
+                else:
+                    self.interrupt() # No hay eventos, detener el flujo
             else:
-                response.failure(f"Could not get ticket types for event {event_id}")
-                return
+                response.failure("Could not fetch events to start purchase flow")
+                self.interrupt()
 
-        # 4. Añadir ticket al carrito
+    @task
+    def view_event_ticket_types(self):
+        if not self.event_id:
+            self.interrupt()
+        with self.client.get(f"/api/v1/events/{self.event_id}/ticket-types", name="/api/v1/events/[id]/ticket-types") as response:
+            if response.status_code == 200 and response.json():
+                available_types = response.json()
+                if available_types:
+                    self.ticket_type_id = random.choice(available_types)['id']
+                else:
+                    self.interrupt() # No hay tipos de ticket para este evento
+            else:
+                response.failure(f"Could not get ticket types for event {self.event_id}")
+                self.interrupt()
+
+    @task
+    def add_to_cart(self):
+        if not self.ticket_type_id:
+            self.interrupt()
         cart_payload = {
-            "ticketTypeId": str(ticket_type_id), # El DTO espera un string
+            "ticketTypeId": str(self.ticket_type_id),
             "cantidad": random.randint(1, 2)
         }
-        with self.client.post("/api/v1/cart/items", json=cart_payload, headers=headers, name="/api/v1/cart/items (add)") as response:
-            if response.status_code != 200:
-                response.failure(f"Failed to add item to cart. Payload: {cart_payload}")
-                return
+        self.client.post("/api/v1/cart/items", json=cart_payload, headers=self.user.headers, name="/api/v1/cart/items (add)")
 
-        # 5. Crear la orden (comprar)
+    @task
+    def create_order(self):
         order_payload = {
-            "paymentMethodId": "pm_card_visa", # Simulación de un método de pago exitoso
+            "paymentMethodId": "pm_card_visa", # Simulación de un método de pago de Stripe
             "billingAddress": {
-                "nombreCompleto": "Usuario de Prueba Locust",
-                "identificacion": "9999999999",
-                "direccion": "Calle Falsa 123",
-                "ciudad": "Locustown",
-                "pais": "EC"
+                "nombreCompleto": "Usuario de Prueba Locust", "identificacion": "9999999999",
+                "direccion": "Calle Falsa 123", "ciudad": "Locustown", "pais": "EC"
             }
         }
-        with self.client.post("/api/v1/orders", json=order_payload, headers=headers, name="/api/v1/orders (create)") as response:
-            if response.status_code != 201:
-                response.failure(f"Failed to create order. Status: {response.status_code}, Text: {response.text}")
-                return
+        self.client.post("/api/v1/orders", json=order_payload, headers=self.user.headers, name="/api/v1/orders (create)")
+        # Al finalizar, el flujo se detiene y el usuario virtual hará otra tarea.
+        self.interrupt()
+
+class OrganizerEventFlow(SequentialTaskSet):
+    """
+    Simula el flujo de un organizador creando un nuevo evento y publicándolo.
+    """
+    def on_start(self):
+        self.venue_id = None
+        self.category_id = None
+        self.event_id = None
+
+    @task
+    def create_venue(self):
+        venue_payload = {
+            "nombre": f"Venue Creado por Locust {random.randint(1000, 9999)}",
+            "direccion": "Av. de la Simulación 123", "ciudad": "Quito", "pais": "EC"
+        }
+        with self.client.post("/api/v1/venues", json=venue_payload, headers=self.user.headers, name="/api/v1/venues (create)") as response:
+            if response.status_code == 201:
+                self.venue_id = response.json().get('id')
+            else:
+                self.interrupt()
+
+    @task
+    def get_category(self):
+        with self.client.get("/api/v1/categories", name="/api/v1/categories (get for organizer)") as response:
+            if response.status_code == 200 and response.json():
+                self.category_id = random.choice(response.json())['id']
+            else:
+                self.interrupt()
+
+    @task
+    def create_event(self):
+        if not self.venue_id or not self.category_id:
+            self.interrupt()
+        event_payload = {
+            "nombre": f"Evento de Prueba Locust {random.randint(1000, 9999)}",
+            "descripcion": "Este es un evento de prueba generado automáticamente por Locust para pruebas de carga.",
+            "fechaInicio": "2025-12-01T20:00:00Z", "fechaFin": "2025-12-01T23:00:00Z",
+            "categoryId": str(self.category_id), "venueId": str(self.venue_id)
+        }
+        with self.client.post("/api/v1/events", json=event_payload, headers=self.user.headers, name="/api/v1/events (create)") as response:
+            if response.status_code == 201:
+                self.event_id = response.json().get('id')
+            else:
+                self.interrupt()
+
+    @task
+    def publish_event(self):
+        if not self.event_id:
+            self.interrupt()
+        self.client.post(f"/api/v1/events/{self.event_id}/publish", headers=self.user.headers, name="/api/v1/events/[id]/publish")
+        self.interrupt()
+
+# ==============================================================================
+# --- DEFINICIÓN DE PERSONAS (Usuarios Virtuales) ---
+# ==============================================================================
+
+class AnonymousUser(HttpUser):
+    """
+    Usuario anónimo que principalmente navega por el sitio.
+    """
+    host = API_HOST
+    wait_time = between(1, 4)
+    weight = 10 # La mayoría del tráfico es de usuarios anónimos
+
+    @task(10)
+    def browse_events(self):
+        self.client.get("/api/v1/events", name="/api/v1/events (browse all)")
+
+    @task(5)
+    def view_event_detail(self):
+        with self.client.get("/api/v1/events?limit=50", name="/api/v1/events (get one for detail)") as response:
+            if response.status_code == 200 and response.json():
+                events = response.json()
+                if events:
+                    event_id = random.choice(events)['id']
+                    self.client.get(f"/api/v1/events/{event_id}", name="/api/v1/events/[id] (detail view)")
+
+    @task(3)
+    def browse_categories(self):
+        self.client.get("/api/v1/categories", name="/api/v1/categories (browse)")
+
+    @task(2)
+    def browse_venues(self):
+        self.client.get("/api/v1/venues", name="/api/v1/venues (browse)")
+
+class CustomerUser(BaseApiUser):
+    """
+    Usuario registrado que inicia sesión, navega y compra tickets.
+    """
+    wait_time = between(2, 5)
+    weight = 5 # Menos clientes que navegantes, pero son tráfico importante
+
+    def on_start(self):
+        self.login(CUSTOMER_CREDENTIALS, "Customer")
+
+    @task(10)
+    def browse(self):
+        # Un cliente logueado también navega
+        self.client.get("/api/v1/events", name="/api/v1/events (customer browse)", headers=self.headers)
+
+    @task(3)
+    def purchase_flow(self):
+        if self.token: # Solo intentar si el login fue exitoso
+            self.run_task(CustomerPurchaseFlow)
+
+    @task(5)
+    def view_my_orders_and_tickets(self):
+        if not self.token:
+            return
+        # Ver historial de órdenes
+        with self.client.get("/api/v1/orders", name="/api/v1/orders (view history)", headers=self.headers) as response:
+            if response.status_code == 200 and response.json():
+                orders = response.json().get('data', [])
+                if orders:
+                    # Ver el detalle de una orden
+                    order_id = random.choice(orders)['id']
+                    self.client.get(f"/api/v1/orders/{order_id}", name="/api/v1/orders/[id] (detail)", headers=self.headers)
+        # Ver mis tickets
+        self.client.get("/api/v1/tickets", name="/api/v1/tickets (view my tickets)", headers=self.headers)
+
+class OrganizerUser(BaseApiUser):
+    """
+    Usuario organizador que crea y gestiona eventos.
+    """
+    wait_time = between(5, 15) # Los organizadores realizan acciones más lentas y pesadas
+    weight = 1 # El tráfico de organizadores es el menos frecuente
+
+    def on_start(self):
+        self.login(ORGANIZER_CREDENTIALS, "Organizer")
+
+    @task
+    def create_and_manage_events(self):
+        if self.token:
+            self.run_task(OrganizerEventFlow)
