@@ -17,8 +17,8 @@ services:
     routes:
       - name: tickets-cart
         paths:
-          - /api/v1/ticketslave/cart
-        strip_path: true
+          - /api/v1/cart
+        strip_path: false
         methods:
           - GET
           - POST
@@ -28,8 +28,8 @@ services:
           - OPTIONS
       - name: tickets-orders
         paths:
-          - /api/v1/ticketslave/orders
-        strip_path: true
+          - /api/v1/orders
+        strip_path: false
         methods:
           - GET
           - POST
@@ -39,8 +39,8 @@ services:
           - OPTIONS
       - name: tickets-tickets
         paths:
-          - /api/v1/ticketslave/tickets
-        strip_path: true
+          - /api/v1/tickets
+        strip_path: false
         methods:
           - GET
           - POST
@@ -50,8 +50,8 @@ services:
           - OPTIONS
       - name: tickets-ticket-types
         paths:
-          - ~/api/v1/ticketslave/events/\d+/ticket-types
-        strip_path: true
+          - ~/api/v1/events/\d+/ticket-types
+        strip_path: false
         methods:
           - GET
           - POST
@@ -72,8 +72,8 @@ services:
     routes:
       - name: usuarios-auth
         paths:
-          - /api/v1/ticketslave/auth
-        strip_path: true
+          - /api/v1/auth
+        strip_path: false
         methods:
           - GET
           - POST
@@ -83,8 +83,8 @@ services:
           - OPTIONS
       - name: usuarios-users
         paths:
-          - /api/v1/ticketslave/users
-        strip_path: true
+          - /api/v1/users
+        strip_path: false
         methods:
           - GET
           - POST
@@ -94,8 +94,8 @@ services:
           - OPTIONS
       - name: usuarios-roles
         paths:
-          - /api/v1/ticketslave/roles
-        strip_path: true
+          - /api/v1/roles
+        strip_path: false
         methods:
           - GET
           - POST
@@ -105,8 +105,8 @@ services:
           - OPTIONS
       - name: usuarios-permissions
         paths:
-          - /api/v1/ticketslave/permissions
-        strip_path: true
+          - /api/v1/permissions
+        strip_path: false
         methods:
           - GET
           - POST
@@ -127,8 +127,8 @@ services:
     routes:
       - name: eventos-events
         paths:
-          - /api/v1/ticketslave/events
-        strip_path: true
+          - /api/v1/events
+        strip_path: false
         methods:
           - GET
           - POST
@@ -138,8 +138,8 @@ services:
           - OPTIONS
       - name: eventos-categories
         paths:
-          - /api/v1/ticketslave/categories
-        strip_path: true
+          - /api/v1/categories
+        strip_path: false
         methods:
           - GET
           - POST
@@ -149,8 +149,8 @@ services:
           - OPTIONS
       - name: eventos-venues
         paths:
-          - /api/v1/ticketslave/venues
-        strip_path: true
+          - /api/v1/venues
+        strip_path: false
         methods:
           - GET
           - POST
