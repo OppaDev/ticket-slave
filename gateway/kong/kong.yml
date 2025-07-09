@@ -77,8 +77,7 @@ services:
               secret_is_base64: false
               claims_to_verify:
                 - exp
-                - iat
-              key_claim_name: iss
+              key_claim_name: sub
               maximum_expiration: 3600
           - name: rate-limiting
             config:
@@ -89,7 +88,7 @@ services:
             config:
               add:
                 headers:
-                  - "X-User-Id:{{jwt.claim.user_id}}"
+                  - "X-User-Id:{{jwt.claim.sub}}"
                   - "X-User-Context:authenticated"
                   
       # --- Pedidos (Requiere autenticación y rate limiting estricto) ---
@@ -106,8 +105,7 @@ services:
               secret_is_base64: false
               claims_to_verify:
                 - exp
-                - iat
-              key_claim_name: iss
+              key_claim_name: sub
               maximum_expiration: 3600
           - name: rate-limiting
             config:
@@ -121,7 +119,7 @@ services:
             config:
               add:
                 headers:
-                  - "X-User-Id:{{jwt.claim.user_id}}"
+                  - "X-User-Id:{{jwt.claim.sub}}"
               
       # --- Gestión de Entradas (Requiere autenticación) ---
       - name: route-tickets
