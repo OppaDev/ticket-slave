@@ -1,7 +1,7 @@
 const Joi = require('joi');
 
 const nombre = Joi.string().min(3).max(15);
-const roleId = Joi.number().integer().required();
+const roleId = Joi.string();
 const email = Joi.string().email().required();
 const password = Joi.string().min(8).required();
 const passwordConfirmation = Joi.string()

@@ -1,10 +1,10 @@
 //file schemas/product.schema.js
 const Joi = require('joi');
 
-const id = Joi.number().integer();
+const id = Joi.string();
 const nombre = Joi.string().min(3).max(15);
 const email = Joi.string().email();
-const roleId = Joi.number().integer();
+const roleId = Joi.string();
 const password = Joi.string().min(8);
 const apellido = Joi.string();
 const status = Joi.string().valid('activo', 'inactivo').default('activo');

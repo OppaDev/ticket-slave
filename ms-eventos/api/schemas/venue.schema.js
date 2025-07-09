@@ -1,7 +1,7 @@
 // api/schemas/venue.schema.js
 const Joi = require('joi');
 
-const id = Joi.number();
+const id = Joi.string();
 const nombre = Joi.string().min(3).max(100);
 const direccion = Joi.string().min(5);
 const ciudad = Joi.string().min(3);

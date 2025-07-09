@@ -8,8 +8,8 @@ const descripcion = Joi.string().min(20);
 const fechaInicio = Joi.date();
 const fechaFin = Joi.date().greater(Joi.ref('fechaInicio'));
 const imagenUrl = Joi.string().uri();
-const categoryId = Joi.number().integer();
-const venueId = Joi.number().integer();
+const categoryId = Joi.string();
+const venueId = Joi.string();
 
 // Para paginación y filtros
 const limit = Joi.number().integer();
