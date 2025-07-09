@@ -1,5 +1,5 @@
 _format_version: "3.0"
-_comment: "Configuración simple de Kong como API Gateway y balanceador de carga."
+_comment: "Configuración de Kong como API Gateway y balanceador de carga con formato /api/v1/ticketslave/"
 
 # ------------------------------------------------------------------------------
 # SERVICIOS: Define los microservicios backend
@@ -15,11 +15,35 @@ services:
     retries: 3
     
     routes:
-      # --- Todas las rutas de ms-tickets ---
-      - name: route-tickets-all
+      # --- Rutas de tickets (cart, orders, tickets) ---
+      - name: route-tickets-cart
         paths:
-          - /api/v1
-        strip_path: false
+          - /api/v1/ticketslave/cart
+        strip_path: true
+        methods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - PATCH
+          - OPTIONS
+        
+      - name: route-tickets-orders
+        paths:
+          - /api/v1/ticketslave/orders
+        strip_path: true
+        methods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - PATCH
+          - OPTIONS
+          
+      - name: route-tickets-tickets
+        paths:
+          - /api/v1/ticketslave/tickets
+        strip_path: true
         methods:
           - GET
           - POST
@@ -30,7 +54,7 @@ services:
 
   # --- Servicio ms-usuarios ---
   - name: service-users
-    url: http://host.docker.internal:3001
+    url: http://host.docker.internal:3010
     protocol: http
     connect_timeout: 5000
     read_timeout: 30000
@@ -38,14 +62,50 @@ services:
     retries: 3
     
     routes:
-      # --- Todas las rutas de ms-usuarios ---
-      - name: route-users-all
+      # --- Rutas de autenticación ---
+      - name: route-users-auth
         paths:
-          - /api/v1/auth
-          - /api/v1/users
-          - /api/v1/roles
-          - /api/v1/permissions
-        strip_path: false
+          - /api/v1/ticketslave/auth
+        strip_path: true
+        methods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - PATCH
+          - OPTIONS
+          
+      # --- Rutas de usuarios ---
+      - name: route-users-users
+        paths:
+          - /api/v1/ticketslave/users
+        strip_path: true
+        methods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - PATCH
+          - OPTIONS
+          
+      # --- Rutas de roles ---
+      - name: route-users-roles
+        paths:
+          - /api/v1/ticketslave/roles
+        strip_path: true
+        methods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - PATCH
+          - OPTIONS
+          
+      # --- Rutas de permisos ---
+      - name: route-users-permissions
+        paths:
+          - /api/v1/ticketslave/permissions
+        strip_path: true
         methods:
           - GET
           - POST
@@ -56,7 +116,7 @@ services:
 
   # --- Servicio ms-eventos ---
   - name: service-events
-    url: http://host.docker.internal:3002
+    url: http://host.docker.internal:3005
     protocol: http
     connect_timeout: 5000
     read_timeout: 30000
@@ -64,13 +124,11 @@ services:
     retries: 3
     
     routes:
-      # --- Todas las rutas de ms-eventos ---
-      - name: route-events-all
+      # --- Rutas de eventos ---
+      - name: route-events-events
         paths:
-          - /api/v1/events
-          - /api/v1/categories
-          - /api/v1/venues
-        strip_path: false
+          - /api/v1/ticketslave/events
+        strip_path: true
         methods:
           - GET
           - POST
@@ -78,22 +136,38 @@ services:
           - DELETE
           - PATCH
           - OPTIONS
-
-  # --- Servicio ms-notifications ---
-  - name: service-notifications
-    url: http://host.docker.internal:3003
-    protocol: http
-    connect_timeout: 5000
-    read_timeout: 30000
-    write_timeout: 30000
-    retries: 3
-    
-    routes:
-      # --- Todas las rutas de ms-notifications ---
-      - name: route-notifications-all
+          
+      # --- Rutas de categorías ---
+      - name: route-events-categories
         paths:
-          - /api/v1/notifications
-        strip_path: false
+          - /api/v1/ticketslave/categories
+        strip_path: true
+        methods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - PATCH
+          - OPTIONS
+          
+      # --- Rutas de venues ---
+      - name: route-events-venues
+        paths:
+          - /api/v1/ticketslave/venues
+        strip_path: true
+        methods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - PATCH
+          - OPTIONS
+          
+      # --- Rutas de tipos de ticket (anidadas) ---
+      - name: route-tickets-ticket-types
+        paths:
+          - /api/v1/ticketslave/events
+        strip_path: true
         methods:
           - GET
           - POST
