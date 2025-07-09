@@ -1,46 +1,46 @@
 services:
-  #base de datos posgres 16-alpine para kong
-  kong-database:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_USER: kong
-      POSTGRES_PASSWORD: kong
-      POSTGRES_DB: kong
-    volumes:
-      - kong_data:/var/lib/postgresql/data
-    networks:
-      - kong-net
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U kong"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-  #migracion inicial de la base de datos
-  kong-migrations:
-    image: kong:latest
-    command: kong migrations bootstrap
-    depends_on:
-      kong-database:
-        condition: service_healthy
-    environment:
-      KONG_DATABASE: postgres
-      KONG_PG_HOST: kong-database
-      KONG_PG_USER: kong
-      KONG_PG_PASSWORD: kong
-      KONG_PG_DATABASE: kong
-    networks:
-      - kong-net
-    restart: on-failure
+  # #base de datos posgres 16-alpine para kong
+  # kong-database:
+  #   image: postgres:16-alpine
+  #   environment:
+  #     POSTGRES_USER: kong
+  #     POSTGRES_PASSWORD: kong
+  #     POSTGRES_DB: kong
+  #   volumes:
+  #     - kong_data:/var/lib/postgresql/data
+  #   networks:
+  #     - kong-net
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U kong"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  # #migracion inicial de la base de datos
+  # kong-migrations:
+  #   image: kong:latest
+  #   command: kong migrations bootstrap
+  #   depends_on:
+  #     kong-database:
+  #       condition: service_healthy
+  #   environment:
+  #     KONG_DATABASE: postgres
+  #     KONG_PG_HOST: kong-database
+  #     KONG_PG_USER: kong
+  #     KONG_PG_PASSWORD: kong
+  #     KONG_PG_DATABASE: kong
+  #   networks:
+  #     - kong-net
+  #   restart: on-failure
   #kong gateway
   kong:
     image: kong:latest
-    depends_on:
-      kong-database:
-        condition: service_healthy
-      kong-migrations:
-        condition: service_completed_successfully
+    # depends_on:
+    #   kong-database:
+    #     condition: service_healthy
+    #   kong-migrations:
+    #     condition: service_completed_successfully
     environment:
-      KONG_DATABASE: postgres
+      KONG_DATABASE: "off"
       KONG_PG_HOST: kong-database
       KONG_PG_USER: kong
       KONG_PG_PASSWORD: kong
@@ -62,7 +62,7 @@ services:
       - "8002:8002"  # Puerto de Kong Manager (interfaz web)
     # Montar archivo de configuración
     volumes:
-      - ./kong.yml:/kong/declarative/kong.yml
+      - ./kong/kong.yml:/kong/declarative/kong.yml
     networks:
       - kong-net
     healthcheck:
