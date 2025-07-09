@@ -6,16 +6,15 @@
  * buscaría el usuario en la base de datos y lo adjuntaría al objeto `req`.
  */
 const authenticate = (req, res, next) => {
-    // Para fines de desarrollo, simulamos un usuario autenticado.
-    // Asumimos que el token nos da un ID de usuario.
+    // Extrae el userId de la cabecera enviada por Kong
+    const userId = req.header('X-User-Id');
+    if (!userId) {
+        return res.status(401).json({ message: 'No autorizado: userId no presente' });
+    }
     req.user = {
-        id: 1, // ID del usuario simulado
-        // ... otros datos del usuario (rol, etc.)
+        id: parseInt(userId, 10),
+        // ... otros datos del usuario si se agregan más claims
     };
-
-    // En un caso real, si el token no es válido:
-    // return res.status(401).json({ message: 'No autorizado' });
-
     next();
 };
 

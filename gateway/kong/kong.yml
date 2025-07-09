@@ -72,6 +72,14 @@ services:
           - POST
           - DELETE
         plugins:
+          - name: jwt
+            config:
+              secret_is_base64: false
+              claims_to_verify:
+                - exp
+                - iat
+              key_claim_name: iss
+              maximum_expiration: 3600
           - name: rate-limiting
             config:
               minute: 30
@@ -81,6 +89,7 @@ services:
             config:
               add:
                 headers:
+                  - "X-User-Id:{{jwt.claim.user_id}}"
                   - "X-User-Context:authenticated"
                   
       # --- Pedidos (Requiere autenticación y rate limiting estricto) ---
@@ -92,6 +101,14 @@ services:
           - GET
           - POST
         plugins:
+          - name: jwt
+            config:
+              secret_is_base64: false
+              claims_to_verify:
+                - exp
+                - iat
+              key_claim_name: iss
+              maximum_expiration: 3600
           - name: rate-limiting
             config:
               minute: 10   # Máximo 10 pedidos por minuto
@@ -100,6 +117,11 @@ services:
           - name: request-size-limiting
             config:
               allowed_payload_size: 1  # 1MB máximo para datos de pedido
+          - name: request-transformer
+            config:
+              add:
+                headers:
+                  - "X-User-Id:{{jwt.claim.user_id}}"
               
       # --- Gestión de Entradas (Requiere autenticación) ---
       - name: route-tickets
