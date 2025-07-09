@@ -1,33 +1,21 @@
 const express = require('express');
 const helmet = require('helmet');
 const compression = require('compression');
-const morgan = require('morgan');
-const rateLimit = require('express-rate-limit');
+const morgan = a('morgan');
 
 module.exports = (app) => {
-    // Seguridad
+    // Seguridad básica
     app.use(helmet());
 
-    // Compresión
+    // Compresión de respuestas
     app.use(compression());
 
-    // Logging
+    // Logging de peticiones HTTP en desarrollo/producción
     if (process.env.NODE_ENV !== 'test') {
         app.use(morgan('combined'));
     }
 
-    // Rate limiting
-    const limiter = rateLimit({
-        windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutos
-        max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
-        message: {
-            error: 'Demasiadas peticiones',
-            message: 'Has superado el límite de peticiones. Intenta de nuevo más tarde.'
-        }
-    });
-    app.use(limiter);
-
-    // Parsing
+    // Parsing de JSON y URL-encoded bodies
     app.use(express.json({ limit: '10mb' }));
     app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 

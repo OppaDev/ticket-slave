@@ -10,7 +10,7 @@ config.cors(app);
 // Rutas principales
 app.get('/api/v1', (req, res) => {
     res.json({
-        message: 'Microservicio funcionando correctamente',
+        message: 'Microservicio de Notificaciones funcionando.',
         timestamp: new Date().toISOString(),
         version: '1.0.0'
     });
@@ -32,22 +32,17 @@ app.use('/api/v1', apiRoutes);
 app.use('*', (req, res) => {
     res.status(404).json({
         error: 'Ruta no encontrada',
-        message: `La ruta ${req.originalUrl} no existe`,
-        timestamp: new Date().toISOString()
+        message: `La ruta ${req.originalUrl} no existe en este servicio.`
     });
 });
 
-// Middleware global de manejo de errores
+// Middleware global de manejo de errores simplificado
 app.use((err, req, res, next) => {
-    console.error('Error:', err);
+    console.error('Error no controlado:', err.stack);
 
-    const statusCode = err.statusCode || 500;
-    const message = err.message || 'Error interno del servidor';
-
-    res.status(statusCode).json({
+    res.status(500).json({
         error: true,
-        message,
-        ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+        message: 'Ha ocurrido un error inesperado en el servidor.',
     });
 });
 
