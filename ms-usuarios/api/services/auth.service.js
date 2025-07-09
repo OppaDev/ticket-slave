@@ -38,7 +38,10 @@ class AuthService {
     return newUser;
   }
   async getUser(email, password) {
-    const user = await userService.findByEmail(email);
+    const user = await userService.findByEmail(email, {
+      include: ['role']
+    }
+    );
 
     const match = await bcrypt.compare(password, user.password);
     if (!match) {

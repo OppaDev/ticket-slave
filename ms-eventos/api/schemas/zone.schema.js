@@ -2,7 +2,7 @@
 const Joi = require('joi');
 
 const id = Joi.string();
-const venueId = Joi.number().integer();
+const venueId = Joi.string();
 const nombre = Joi.string().min(3).max(50);
 const capacidad = Joi.number().integer().min(1);
 

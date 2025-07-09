@@ -10,12 +10,9 @@ const passport = require('passport');
 function routerApi(app) {
 
   const router = express.Router();
-  app.use('', router);
+  app.use('/api/v1', router);
 
-  router.use('/users',
-    // passport.authenticate('jwt', { session: false }),
-    // checkRole('admin'),
-    usersRouter);
+  router.use('/users', usersRouter);
   router.use('/auth', authRouter);
   router.use('/permissions', permissionsRouter);
   router.use('/roles', rolesRouter);
