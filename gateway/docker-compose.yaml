@@ -62,7 +62,7 @@ services:
       - "8002:8002"  # Puerto de Kong Manager (interfaz web)
     # Montar archivo de configuración
     volumes:
-      - ./kong.yml:/kong/declarative/kong.yml
+      - ./kong/kong.yml:/kong/declarative/kong.yml
     networks:
       - kong-net
     healthcheck:
