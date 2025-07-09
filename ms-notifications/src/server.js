@@ -27,6 +27,7 @@ const startServer = async () => {
         // Manejo de cierre graceful
         const gracefulShutdown = async () => {
             console.log('🔄 Cerrando servicios...');
+            await consumerService.stop(); 
             server.close(() => {
                 console.log('✅ Servidor HTTP cerrado.');
                 sequelize.close().then(() => {

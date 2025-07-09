@@ -58,6 +58,13 @@ class ConsumerService {
             }
         }
     }
+
+    async stop() {
+        if (this.channel) {
+            await this.channel.close();
+            console.log('🔌 Canal de RabbitMQ cerrado.');
+        }
+    }
 }
 
 module.exports = new ConsumerService();
