@@ -4,7 +4,8 @@ const { body } = require('express-validator');
 const createOrderDTO = [
     body('paymentMethodId')
         .trim()
-        .notEmpty().withMessage('El ID del método de pago (paymentMethodId) es requerido.'),
+        .notEmpty().withMessage('El ID del método de pago (paymentMethodId) es requerido.')
+        .isString().withMessage('El ID del método de pago (paymentMethodId) debe ser una cadena de texto.'),
 
     body('billingAddress')
         .notEmpty().withMessage('La dirección de facturación es requerida.')
