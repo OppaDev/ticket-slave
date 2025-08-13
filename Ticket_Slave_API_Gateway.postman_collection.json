@@ -1,0 +1,1919 @@
+{
+	"info": {
+		"_postman_id": "b5c8f7a2-4e6c-4a5f-8d9e-1b2c3d4e5f6g",
+		"name": "Ticket Slave - API Gateway (Kong)",
+		"description": "Colección completa para probar todos los endpoints del sistema de microservicios Ticket Slave a través de Kong Gateway.\n\n**Arquitectura:**\n- Kong Gateway: Puerto 8000\n- ms-usuarios: 3010 (Auth, Users, Roles, Permissions)\n- ms-eventos: 3005 (Events, Categories, Venues)\n- ms-tickets: 3000 (Tickets, Orders, Cart)\n- ms-notifications: 3001 (Health check)\n\n**Uso:**\n1. Ejecutar 'Login' primero para obtener JWT token\n2. El token se guarda automáticamente en {{jwt_token}}\n3. Todos los endpoints protegidos usan automáticamente el token\n\n**Variables de entorno configuradas:**\n- gateway_url: http://localhost:8000\n- jwt_token: Se actualiza automáticamente al hacer login",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "🔐 Authentication",
+			"item": [
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set('jwt_token', response.token);",
+									"    pm.test('Token saved to environment', function() {",
+									"        pm.expect(response.token).to.exist;",
+									"    });",
+									"    console.log('JWT Token saved:', response.token.substring(0, 20) + '...');",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"admin@test.com\",\n  \"password\": \"password\"\n}"
+						},
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/auth/login",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"login"
+							]
+						},
+						"description": "Login con usuario admin. Guarda automáticamente el JWT token en la variable de entorno."
+					},
+					"response": []
+				},
+				{
+					"name": "Login Organizer",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set('jwt_token', response.token);",
+									"    pm.test('Organizer token saved', function() {",
+									"        pm.expect(response.token).to.exist;",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"organizer@test.com\",\n  \"password\": \"password\"\n}"
+						},
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/auth/login",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Login Customer",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set('jwt_token', response.token);",
+									"    pm.test('Customer token saved', function() {",
+									"        pm.expect(response.token).to.exist;",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"customer@test.com\",\n  \"password\": \"password\"\n}"
+						},
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/auth/login",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Register User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nombre\": \"Nuevo\",\n  \"apellido\": \"Usuario\",\n  \"email\": \"nuevo@test.com\",\n  \"password\": \"password123\",\n  \"fechaNacimiento\": \"1990-01-01\",\n  \"pais\": \"EC\"\n}"
+						},
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/auth/register",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"register"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Password Recovery",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"admin@test.com\"\n}"
+						},
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/auth/recover",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"recover"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Reset Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"token\": \"recovery_token_here\",\n  \"newPassword\": \"newpassword123\"\n}"
+						},
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/auth/reset",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"reset"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints de autenticación del sistema"
+		},
+		{
+			"name": "👥 Users Management",
+			"item": [
+				{
+					"name": "Get All Users",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/users",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users"
+							]
+						},
+						"description": "Obtener todos los usuarios (requiere autenticación)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get User by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/users/{{user_id}}",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"{{user_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update User",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nombre\": \"Nombre Actualizado\",\n  \"apellido\": \"Apellido Actualizado\"\n}"
+						},
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/users/{{user_id}}",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"{{user_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete User",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/users/{{user_id}}",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"{{user_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get User Role",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/users/{{user_id}}/role",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"{{user_id}}",
+								"role"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Assign Role to User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"roleId\": \"role_id_here\"\n}"
+						},
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/users/{{user_id}}/role",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"{{user_id}}",
+								"role"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints de gestión de usuarios"
+		},
+		{
+			"name": "🎭 Roles & Permissions",
+			"item": [
+				{
+					"name": "Create Role",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nombre\": \"new_role\",\n  \"descripcion\": \"Descripción del nuevo rol\"\n}"
+						},
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/roles",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"roles"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Roles",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/roles",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"roles"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Role by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/roles/{{role_id}}",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"roles",
+								"{{role_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Role",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nombre\": \"updated_role\",\n  \"descripcion\": \"Descripción actualizada\"\n}"
+						},
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/roles/{{role_id}}",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"roles",
+								"{{role_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Role",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/roles/{{role_id}}",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"roles",
+								"{{role_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Role Permissions",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/roles/{{role_id}}/permissions",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"roles",
+								"{{role_id}}",
+								"permissions"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Assign Permissions to Role",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"permissionIds\": [\"permission_id_1\", \"permission_id_2\"]\n}"
+						},
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/roles/{{role_id}}/permissions",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"roles",
+								"{{role_id}}",
+								"permissions"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Permission",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nombre\": \"new_permission\",\n  \"descripcion\": \"Descripción del permiso\"\n}"
+						},
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/permissions",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"permissions"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Permissions",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/permissions",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"permissions"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Permission by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/permissions/{{permission_id}}",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"permissions",
+								"{{permission_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Permission",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nombre\": \"updated_permission\",\n  \"descripcion\": \"Descripción actualizada\"\n}"
+						},
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/permissions/{{permission_id}}",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"permissions",
+								"{{permission_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Permission",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/permissions/{{permission_id}}",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"permissions",
+								"{{permission_id}}"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints de gestión de roles y permisos"
+		},
+		{
+			"name": "🎪 Events Management",
+			"item": [
+				{
+					"name": "Get All Events",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/events?limit=10&offset=0",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"events"
+							],
+							"query": [
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "offset",
+									"value": "0"
+								},
+								{
+									"key": "categoryId",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "venueId",
+									"value": "",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Obtener eventos con paginación y filtros opcionales"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Event by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/events/{{event_id}}",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"events",
+								"{{event_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Event",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200 || pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set('event_id', response.id);",
+									"    pm.test('Event ID saved', function() {",
+									"        pm.expect(response.id).to.exist;",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nombre\": \"Concierto de Rock\",\n  \"descripcion\": \"Un increíble concierto de rock en vivo\",\n  \"fechaInicio\": \"2025-12-25T20:00:00Z\",\n  \"fechaFin\": \"2025-12-25T23:00:00Z\",\n  \"categoryId\": \"1097657245997400065\",\n  \"venueId\": \"1097657561182666753\",\n  \"imagenUrl\": \"https://example.com/image.jpg\"\n}"
+						},
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/events",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"events"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Event",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nombre\": \"Concierto de Rock Actualizado\",\n  \"descripcion\": \"Descripción actualizada del evento\"\n}"
+						},
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/events/{{event_id}}",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"events",
+								"{{event_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Publish Event",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/events/{{event_id}}/publish",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"events",
+								"{{event_id}}",
+								"publish"
+							]
+						},
+						"description": "Cambiar estado del evento de BORRADOR a PUBLICADO"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints de gestión de eventos"
+		},
+		{
+			"name": "📂 Categories",
+			"item": [
+				{
+					"name": "Get All Categories",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/categories",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"categories"
+							]
+						},
+						"description": "Endpoint público - no requiere autenticación"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Category by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/categories/{{category_id}}",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"categories",
+								"{{category_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Category",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200 || pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set('category_id', response.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nombre\": \"Tecnología\",\n  \"descripcion\": \"Conferencias y eventos tecnológicos\"\n}"
+						},
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/categories",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"categories"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Category",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nombre\": \"Tecnología Avanzada\",\n  \"descripcion\": \"Descripción actualizada\"\n}"
+						},
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/categories/{{category_id}}",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"categories",
+								"{{category_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Category",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/categories/{{category_id}}",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"categories",
+								"{{category_id}}"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints de gestión de categorías"
+		},
+		{
+			"name": "🏟️ Venues & Zones",
+			"item": [
+				{
+					"name": "Get All Venues",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/venues",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"venues"
+							]
+						},
+						"description": "Endpoint público - no requiere autenticación"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Venue by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/venues/{{venue_id}}",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"venues",
+								"{{venue_id}}"
+							]
+						},
+						"description": "Incluye las zonas del venue"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Venue",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200 || pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set('venue_id', response.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nombre\": \"Centro de Convenciones\",\n  \"direccion\": \"Av. Principal 123\",\n  \"ciudad\": \"Quito\",\n  \"pais\": \"Ecuador\",\n  \"latitud\": -0.1807,\n  \"longitud\": -78.4678\n}"
+						},
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/venues",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"venues"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Venue",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nombre\": \"Centro de Convenciones Actualizado\",\n  \"direccion\": \"Nueva dirección 456\"\n}"
+						},
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/venues/{{venue_id}}",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"venues",
+								"{{venue_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Venue",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/venues/{{venue_id}}",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"venues",
+								"{{venue_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Venue Zones",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/venues/{{venue_id}}/zones",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"venues",
+								"{{venue_id}}",
+								"zones"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Zone",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200 || pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set('zone_id', response.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nombre\": \"VIP\",\n  \"capacidad\": 100\n}"
+						},
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/venues/{{venue_id}}/zones",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"venues",
+								"{{venue_id}}",
+								"zones"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Zone by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/venues/{{venue_id}}/zones/{{zone_id}}",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"venues",
+								"{{venue_id}}",
+								"zones",
+								"{{zone_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Zone",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nombre\": \"Zona VIP Premium\",\n  \"capacidad\": 150\n}"
+						},
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/venues/{{venue_id}}/zones/{{zone_id}}",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"venues",
+								"{{venue_id}}",
+								"zones",
+								"{{zone_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Zone",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/venues/{{venue_id}}/zones/{{zone_id}}",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"venues",
+								"{{venue_id}}",
+								"zones",
+								"{{zone_id}}"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints de gestión de venues y zonas"
+		},
+		{
+			"name": "🎫 Ticket Management",
+			"item": [
+				{
+					"name": "Get Event Ticket Types",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/events/{{event_id}}/ticket-types",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"events",
+								"{{event_id}}",
+								"ticket-types"
+							]
+						},
+						"description": "Endpoint público - obtiene tipos de ticket disponibles"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Ticket Type",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200 || pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set('ticket_type_id', response.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"General\",\n  \"description\": \"Entrada general al evento\",\n  \"price\": 50.00,\n  \"currency\": \"USD\",\n  \"quantity\": 100,\n  \"minPerPurchase\": 1,\n  \"maxPerPurchase\": 8,\n  \"saleStartDate\": \"2025-11-01T00:00:00Z\",\n  \"saleEndDate\": \"2025-12-25T18:00:00Z\"\n}"
+						},
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/events/{{event_id}}/ticket-types",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"events",
+								"{{event_id}}",
+								"ticket-types"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Ticket Type by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/events/{{event_id}}/ticket-types/{{ticket_type_id}}",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"events",
+								"{{event_id}}",
+								"ticket-types",
+								"{{ticket_type_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Ticket Type",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"General Premium\",\n  \"description\": \"Entrada general premium con beneficios\",\n  \"price\": 65.00,\n  \"quantity\": 80\n}"
+						},
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/events/{{event_id}}/ticket-types/{{ticket_type_id}}",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"events",
+								"{{event_id}}",
+								"ticket-types",
+								"{{ticket_type_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Ticket Type",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/events/{{event_id}}/ticket-types/{{ticket_type_id}}",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"events",
+								"{{event_id}}",
+								"ticket-types",
+								"{{ticket_type_id}}"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints de gestión de tipos de ticket"
+		},
+		{
+			"name": "🛒 Shopping Cart",
+			"item": [
+				{
+					"name": "Get Cart",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/cart",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"cart"
+							]
+						},
+						"description": "Obtener carrito del usuario autenticado"
+					},
+					"response": []
+				},
+				{
+					"name": "Add Item to Cart",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"ticketTypeId\": \"{{ticket_type_id}}\",\n  \"quantity\": 2\n}"
+						},
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/cart/items",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"cart",
+								"items"
+							]
+						},
+						"description": "Agregar tickets al carrito (reserva temporal de 15 min)"
+					},
+					"response": []
+				},
+				{
+					"name": "Remove Item from Cart",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/cart/items/{{cart_item_id}}",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"cart",
+								"items",
+								"{{cart_item_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Clear Cart",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/cart",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"cart"
+							]
+						},
+						"description": "Vaciar todo el carrito"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints del carrito de compras"
+		},
+		{
+			"name": "📝 Orders Management",
+			"item": [
+				{
+					"name": "Create Order (Process Payment)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200 || pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set('order_id', response.id);",
+									"    pm.environment.set('order_code', response.orderCode);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"paymentGatewayId\": \"stripe_pm_123456\",\n  \"billingAddress\": {\n    \"name\": \"Juan Pérez\",\n    \"email\": \"juan@example.com\",\n    \"address\": \"Av. Principal 123\",\n    \"city\": \"Quito\",\n    \"country\": \"Ecuador\",\n    \"zipCode\": \"170517\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/orders",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"orders"
+							]
+						},
+						"description": "Procesar pago del carrito y crear orden"
+					},
+					"response": []
+				},
+				{
+					"name": "Get User Orders",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/orders?limit=10&offset=0",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"orders"
+							],
+							"query": [
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "offset",
+									"value": "0"
+								}
+							]
+						},
+						"description": "Obtener órdenes del usuario con paginación"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Order by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/orders/{{order_id}}",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"orders",
+								"{{order_id}}"
+							]
+						},
+						"description": "Obtener detalles completos de una orden"
+					},
+					"response": []
+				},
+				{
+					"name": "Request Refund",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"reason\": \"No puedo asistir al evento\",\n  \"refundAmount\": null\n}"
+						},
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/orders/{{order_id}}/refund",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"orders",
+								"{{order_id}}",
+								"refund"
+							]
+						},
+						"description": "Solicitar reembolso de una orden"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints de gestión de órdenes"
+		},
+		{
+			"name": "🎟️ User Tickets",
+			"item": [
+				{
+					"name": "Get User Tickets",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/tickets?eventId={{event_id}}&status=active",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"tickets"
+							],
+							"query": [
+								{
+									"key": "eventId",
+									"value": "{{event_id}}"
+								},
+								{
+									"key": "status",
+									"value": "active"
+								},
+								{
+									"key": "limit",
+									"value": "10",
+									"disabled": true
+								},
+								{
+									"key": "offset",
+									"value": "0",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Obtener tickets del usuario con filtros"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Ticket by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/tickets/{{ticket_id}}",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"tickets",
+								"{{ticket_id}}"
+							]
+						},
+						"description": "Obtener ticket específico con código QR"
+					},
+					"response": []
+				},
+				{
+					"name": "Validate Ticket (Check-in)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"ticketCode\": \"TICKET_CODE_HERE\",\n  \"eventId\": \"{{event_id}}\",\n  \"venueId\": \"{{venue_id}}\"\n}"
+						},
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/tickets/check-in",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"tickets",
+								"check-in"
+							]
+						},
+						"description": "Validar ticket en punto de entrada (escáner QR)"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints de tickets del usuario"
+		},
+		{
+			"name": "📧 Notifications",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/health",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"health"
+							]
+						},
+						"description": "Health check del servicio de notificaciones"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints del servicio de notificaciones"
+		},
+		{
+			"name": "🔍 Status & Health",
+			"item": [
+				{
+					"name": "Kong Gateway Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gateway_url}}/",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								""
+							]
+						},
+						"description": "Estado del Kong Gateway"
+					},
+					"response": []
+				},
+				{
+					"name": "MS-Eventos Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gateway_url}}/eventos/status",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"eventos",
+								"status"
+							]
+						},
+						"description": "Estado del microservicio de eventos"
+					},
+					"response": []
+				},
+				{
+					"name": "MS-Notifications Health",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gateway_url}}/api/v1/health",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"health"
+							]
+						},
+						"description": "Health check de notificaciones"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints de estado y salud de los servicios"
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{jwt_token}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "gateway_url",
+			"value": "http://localhost:8000",
+			"type": "string"
+		},
+		{
+			"key": "jwt_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "user_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "role_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "permission_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "event_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "category_id",
+			"value": "1097657245997400065",
+			"type": "string"
+		},
+		{
+			"key": "venue_id",
+			"value": "1097657561182666753",
+			"type": "string"
+		},
+		{
+			"key": "zone_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "ticket_type_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "cart_item_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "order_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "order_code",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "ticket_id",
+			"value": "",
+			"type": "string"
+		}
+	]
+}
