@@ -64,10 +64,18 @@ export function useAuthProvider() {
       localStorage.setItem('user_data', JSON.stringify(authData.user))
       
       // Redirect based on role
-      if (authData.user.role?.nombre === 'admin' || authData.user.role?.nombre === 'organizer') {
-        window.location.href = '/dashboard'
-      } else {
-        window.location.href = '/events'
+      const userRole = authData.user.role?.nombre
+      switch (userRole) {
+        case 'admin':
+          window.location.href = '/dashboard' // Dashboard administrativo
+          break
+        case 'organizer':
+          window.location.href = '/organizer/events' // Dashboard del organizador
+          break
+        case 'customer':
+        default:
+          window.location.href = '/events' // Vista pública de eventos
+          break
       }
     } catch (error) {
       console.error('Login failed:', error)
@@ -152,7 +160,20 @@ export function useProtectedRoute(requiredRoles?: string[]) {
 
       if (requiredRoles && user?.role?.nombre) {
         if (!requiredRoles.includes(user.role.nombre)) {
-          window.location.href = '/unauthorized'
+          // Redirigir a la página apropiada según el rol del usuario
+          const userRole = user.role.nombre
+          switch (userRole) {
+            case 'admin':
+              window.location.href = '/dashboard'
+              break
+            case 'organizer':
+              window.location.href = '/organizer/events'
+              break
+            case 'customer':
+            default:
+              window.location.href = '/events'
+              break
+          }
           return
         }
       }

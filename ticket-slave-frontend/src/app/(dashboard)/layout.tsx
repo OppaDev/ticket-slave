@@ -235,12 +235,12 @@ function Sidebar({ className = '' }: { className?: string }) {
 
       {/* Footer */}
       <div className="p-4 border-t space-y-2">
-        <Link href="/dashboard/settings">
+        {/* <Link href="/dashboard/settings">
           <Button variant="ghost" className="w-full justify-start">
             <Settings className="h-4 w-4 mr-2" />
             Configuraciones
           </Button>
-        </Link>
+        </Link> */}
         <Button 
           variant="ghost" 
           className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"

@@ -1,12 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Edit, ArrowLeft, Calendar, Hash, Type } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { categoriesAPI } from '@/lib/api'
 import type { Category } from '@/types'
@@ -17,7 +16,7 @@ export default function CategoryDetail() {
   const [category, setCategory] = useState<Category | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const loadCategory = async (categoryId: string) => {
+  const loadCategory = useCallback(async (categoryId: string) => {
     try {
       setLoading(true)
       const response = await categoriesAPI.getCategory(categoryId)
@@ -28,13 +27,13 @@ export default function CategoryDetail() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [router])
 
   useEffect(() => {
     if (params.id) {
       loadCategory(params.id as string)
     }
-  }, [params.id])
+  }, [params.id, loadCategory])
 
   if (loading) {
     return (
@@ -135,53 +134,23 @@ export default function CategoryDetail() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Calendar className="w-5 h-5" />
-              Estado y fechas
+              Información de fechas
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div>
-              <label className="text-sm font-medium text-gray-700">Estado</label>
-              <div className="mt-1">
-                <Badge variant={category.activo ? "default" : "secondary"}>
-                  {category.activo ? "Activa" : "Inactiva"}
-                </Badge>
+            {category.createdAt && (
+              <div>
+                <label className="text-sm font-medium text-gray-700">Fecha de creación</label>
+                <p className="mt-1 text-gray-900">
+                  {new Date(category.createdAt).toLocaleDateString('es-ES', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </p>
               </div>
-            </div>
-            
-            {category.fechaCreacion && (
-              <>
-                <Separator />
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Fecha de creación</label>
-                  <p className="mt-1 text-gray-900">
-                    {new Date(category.fechaCreacion).toLocaleDateString('es-ES', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </p>
-                </div>
-              </>
-            )}
-            
-            {category.fechaActualizacion && (
-              <>
-                <Separator />
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Última actualización</label>
-                  <p className="mt-1 text-gray-900">
-                    {new Date(category.fechaActualizacion).toLocaleDateString('es-ES', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </p>
-                </div>
-              </>
             )}
           </CardContent>
         </Card>
