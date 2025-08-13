@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { eventsAPI, ticketsAPI } from '@/lib/api'
+import { eventsAPI, ticketsAPI, venuesAPI } from '@/lib/api'
 import { useTicketsWebSocket } from '@/hooks/use-websocket'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -58,7 +58,7 @@ export default function EventDetailPage() {
         // Fetch venue details if available
         if (eventData.venueId) {
           try {
-            const venueResponse = await eventsAPI.getVenues() // You might need to adjust this to get specific venue
+            const venueResponse = await venuesAPI.getVenues() // Fixed: use venuesAPI instead of eventsAPI
             const venues = venueResponse.data
             const eventVenue = venues.find((v: Venue) => v.id === eventData.venueId)
             if (eventVenue) setVenue(eventVenue)

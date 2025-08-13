@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { ProtectedRoute } from '@/components/auth/protected-route'
 import { rbacAPI } from '@/lib/api'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -12,9 +13,9 @@ import {
   Calendar,
   Ticket,
   Settings,
-  Plus,
   RefreshCw,
   Eye,
+  Edit,
   ShoppingCart,
   Package
 } from 'lucide-react'
@@ -52,6 +53,7 @@ const getPermissionAction = (permissionName: string): string => {
 }
 
 export default function PermissionsPage() {
+  const router = useRouter()
   const [permissions, setPermissions] = useState<Permission[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -133,10 +135,6 @@ export default function PermissionsPage() {
             >
               <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
               Actualizar
-            </Button>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Nuevo Permiso
             </Button>
           </div>
         </div>
@@ -236,11 +234,23 @@ export default function PermissionsPage() {
 
                             {/* Actions */}
                             <div className="flex gap-2">
-                              <Button size="sm" variant="outline" className="flex-1">
-                                Editar
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                className="flex-1"
+                                onClick={() => router.push(`/dashboard/permissions/${permission.id}`)}
+                              >
+                                <Eye className="h-4 w-4 mr-1" />
+                                Ver
                               </Button>
-                              <Button size="sm" variant="outline" className="flex-1">
-                                Roles
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                className="flex-1"
+                                onClick={() => router.push(`/dashboard/permissions/${permission.id}/edit`)}
+                              >
+                                <Edit className="h-4 w-4 mr-1" />
+                                Editar
                               </Button>
                             </div>
                           </CardContent>
