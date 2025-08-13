@@ -2,21 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Plus, Search, Calendar, MapPin, Users, Edit, Trash2, Eye, CheckCircle } from 'lucide-react'
+import { Plus, Search, Calendar, MapPin, Users, Edit, Eye, CheckCircle, ImageIcon } from 'lucide-react'
 import Image from 'next/image'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Alert } from '@/components/ui/alert'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
 import { eventsAPI } from '@/lib/api'
 import { parseApiError, type ParsedError } from '@/lib/error-utils'
 import type { Event } from '@/types'
@@ -26,15 +18,7 @@ export default function EventsListPage() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [apiError, setApiError] = useState<ParsedError | null>(null)
-  const [deleteDialog, setDeleteDialog] = useState<{
-    open: boolean
-    event: Event | null
-    loading: boolean
-  }>({
-    open: false,
-    event: null,
-    loading: false
-  })
+  const [imageErrors, setImageErrors] = useState<Set<string>>(new Set())
 
   const filteredEvents = events.filter(event =>
     event.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -56,26 +40,6 @@ export default function EventsListPage() {
       setApiError(parsedError)
     } finally {
       setLoading(false)
-    }
-  }
-
-  const handleDeleteEvent = async () => {
-    if (!deleteDialog.event) return
-
-    try {
-      setDeleteDialog(prev => ({ ...prev, loading: true }))
-      await eventsAPI.deleteEvent(deleteDialog.event.id)
-      
-      // Actualizar la lista local
-      setEvents(prev => prev.filter(event => event.id !== deleteDialog.event!.id))
-      
-      // Cerrar dialog
-      setDeleteDialog({ open: false, event: null, loading: false })
-    } catch (error) {
-      const parsedError = parseApiError(error)
-      setApiError(parsedError)
-    } finally {
-      setDeleteDialog(prev => ({ ...prev, loading: false }))
     }
   }
 
@@ -108,6 +72,10 @@ export default function EventsListPage() {
       month: 'long',
       day: 'numeric'
     })
+  }
+
+  const handleImageError = (eventId: string) => {
+    setImageErrors(prev => new Set(prev).add(eventId))
   }
 
   if (loading) {
@@ -204,16 +172,24 @@ export default function EventsListPage() {
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {filteredEvents.map((event) => (
             <Card key={event.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-              {event.imagenUrl && (
+              {event.imagenUrl && !imageErrors.has(event.id) ? (
                 <div className="aspect-video relative overflow-hidden">
                   <Image
                     src={event.imagenUrl}
                     alt={event.nombre}
                     className="object-cover"
                     fill
+                    onError={() => handleImageError(event.id)}
                   />
                 </div>
-              )}
+              ) : event.imagenUrl && imageErrors.has(event.id) ? (
+                <div className="aspect-video relative overflow-hidden bg-gray-100 flex items-center justify-center">
+                  <div className="text-center">
+                    <ImageIcon className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                    <p className="text-sm text-gray-500">Imagen no disponible</p>
+                  </div>
+                </div>
+              ) : null}
               
               <CardHeader>
                 <div className="flex items-start justify-between">
@@ -266,19 +242,6 @@ export default function EventsListPage() {
                         <Edit className="h-4 w-4" />
                       </Button>
                     </Link>
-                    
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setDeleteDialog({ 
-                        open: true, 
-                        event, 
-                        loading: false 
-                      })}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
                   </div>
                   
                   {event.status !== 'PUBLICADO' && (
@@ -298,38 +261,6 @@ export default function EventsListPage() {
           ))}
         </div>
       )}
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog 
-        open={deleteDialog.open} 
-        onOpenChange={(open) => !deleteDialog.loading && setDeleteDialog(prev => ({ ...prev, open }))}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>¿Eliminar evento?</DialogTitle>
-            <DialogDescription>
-              Esta acción eliminará permanentemente el evento &quot;{deleteDialog.event?.nombre}&quot;.
-              Esta acción no se puede deshacer.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setDeleteDialog({ open: false, event: null, loading: false })}
-              disabled={deleteDialog.loading}
-            >
-              Cancelar
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDeleteEvent}
-              disabled={deleteDialog.loading}
-            >
-              {deleteDialog.loading ? 'Eliminando...' : 'Eliminar'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

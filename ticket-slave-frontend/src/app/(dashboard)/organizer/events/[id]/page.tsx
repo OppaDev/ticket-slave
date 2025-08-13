@@ -1,42 +1,26 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { ArrowLeft, Calendar, MapPin, Users, Edit, Trash2, CheckCircle, Clock, Globe } from 'lucide-react'
+import { ArrowLeft, Calendar, MapPin, Users, Edit, CheckCircle, Clock, Globe } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Alert } from '@/components/ui/alert'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
 import { eventsAPI } from '@/lib/api'
 import { parseApiError, type ParsedError } from '@/lib/error-utils'
 import type { Event } from '@/types'
 
 export default function EventDetailsPage() {
   const params = useParams()
-  const router = useRouter()
   const eventId = params.id as string
   
   const [event, setEvent] = useState<Event | null>(null)
   const [loading, setLoading] = useState(true)
   const [apiError, setApiError] = useState<ParsedError | null>(null)
-  const [deleteDialog, setDeleteDialog] = useState<{
-    open: boolean
-    loading: boolean
-  }>({
-    open: false,
-    loading: false
-  })
 
   const loadEvent = useCallback(async () => {
     try {
@@ -57,23 +41,6 @@ export default function EventDetailsPage() {
       loadEvent()
     }
   }, [eventId, loadEvent])
-
-  const handleDeleteEvent = async () => {
-    if (!event) return
-
-    try {
-      setDeleteDialog(prev => ({ ...prev, loading: true }))
-      await eventsAPI.deleteEvent(event.id)
-      
-      // Redirigir a la lista de eventos
-      router.push('/organizer/events')
-    } catch (error) {
-      const parsedError = parseApiError(error)
-      setApiError(parsedError)
-    } finally {
-      setDeleteDialog(prev => ({ ...prev, loading: false }))
-    }
-  }
 
   const handlePublishEvent = async () => {
     if (!event) return
@@ -213,15 +180,6 @@ export default function EventDetailsPage() {
               Editar
             </Button>
           </Link>
-          
-          <Button
-            variant="outline"
-            onClick={() => setDeleteDialog({ open: true, loading: false })}
-            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-          >
-            <Trash2 className="h-4 w-4 mr-2" />
-            Eliminar
-          </Button>
         </div>
       </div>
 
@@ -350,38 +308,6 @@ export default function EventDetailsPage() {
           </div>
         </CardContent>
       </Card>
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog 
-        open={deleteDialog.open} 
-        onOpenChange={(open) => !deleteDialog.loading && setDeleteDialog(prev => ({ ...prev, open }))}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>¿Eliminar evento?</DialogTitle>
-            <DialogDescription>
-              Esta acción eliminará permanentemente el evento &quot;{event.nombre}&quot;.
-              Esta acción no se puede deshacer.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setDeleteDialog({ open: false, loading: false })}
-              disabled={deleteDialog.loading}
-            >
-              Cancelar
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDeleteEvent}
-              disabled={deleteDialog.loading}
-            >
-              {deleteDialog.loading ? 'Eliminando...' : 'Eliminar'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

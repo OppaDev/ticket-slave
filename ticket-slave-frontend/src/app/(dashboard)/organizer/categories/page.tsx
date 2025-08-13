@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { Plus, Search, Eye, Edit, Trash2, Folder } from 'lucide-react'
+import { Plus, Search, Eye, Edit, Folder } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -49,19 +49,7 @@ export default function CategoriesManagement() {
     }
   }
 
-  const handleDeleteCategory = async (categoryId: string) => {
-    if (!confirm('¿Estás seguro de que quieres eliminar esta categoría?')) {
-      return
-    }
-
-    try {
-      await categoriesAPI.deleteCategory(categoryId)
-      await loadCategories() // Recargar categorías
-    } catch (error) {
-      console.error('Error deleting category:', error)
-      alert('Error al eliminar la categoría. Puede que tenga eventos asociados.')
-    }
-  }
+  
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('es-ES', {
@@ -156,14 +144,6 @@ export default function CategoriesManagement() {
                         Editar
                       </Button>
                     </Link>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                      onClick={() => handleDeleteCategory(category.id)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
                   </div>
                 </div>
               </CardContent>
