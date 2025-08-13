@@ -13,12 +13,12 @@ class TicketService {
      * Esta función es llamada internamente por el OrderService.
      */
     async generateTicketsForOrderItem(orderItem, transaction) {
-        const tickets = [];
         const ticketType = await orderItem.getTicketType({ transaction });
         const order = await orderItem.getOrder({ transaction });
-
+        
+        // Preparar todos los tickets para bulk insert
+        const ticketsData = [];
         for (let i = 0; i < orderItem.quantity; i++) {
-            const ticketIdSeed = `${order.id}-${orderItem.id}-${i}`;
             const ticketCode = `TKT-E${ticketType.eventId}-T${orderItem.id}-${i + 1}`;
 
             const qrPayload = {
@@ -31,7 +31,7 @@ class TicketService {
             const signature = crypto.createHmac('sha256', JWT_SECRET).update(JSON.stringify(qrPayload)).digest('hex');
             qrPayload.sig = signature;
 
-            const ticketData = {
+            ticketsData.push({
                 ticketCode,
                 orderItemId: orderItem.id,
                 userId: order.userId,
@@ -39,11 +39,11 @@ class TicketService {
                 status: 'VALID',
                 qrCodeData: JSON.stringify(qrPayload),
                 ownerName: order.billingAddress.nombreCompleto
-            };
-
-            const newTicket = await Ticket.create(ticketData, { transaction });
-            tickets.push(newTicket);
+            });
         }
+        
+        // Bulk insert - mucho más eficiente
+        const tickets = await Ticket.bulkCreate(ticketsData, { transaction });
         return tickets;
     }
 

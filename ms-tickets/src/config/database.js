@@ -23,10 +23,11 @@ if (isTest) {
         dialect: process.env.DB_DIALECT || 'postgres',
         logging: process.env.NODE_ENV === 'development' ? console.log : false,
         pool: {
-            max: 10,
-            min: 0,
-            acquire: 30000,
-            idle: 10000
+            max: 5,
+            min: 1,
+            acquire: 60000,
+            idle: 10000,
+            evict: 1000
         },
         dialectOptions: {
             ssl: process.env.NODE_ENV === 'production' ? {

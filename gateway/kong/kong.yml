@@ -10,8 +10,8 @@ services:
     url: http://host.docker.internal:3000
     protocol: http
     connect_timeout: 5000
-    read_timeout: 60000
-    write_timeout: 60000
+    read_timeout: 120000
+    write_timeout: 120000
     retries: 3
 
     routes:
