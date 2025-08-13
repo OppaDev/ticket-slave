@@ -4,29 +4,133 @@ export interface User {
   nombre: string
   apellido: string
   email: string
+  password?: string // Only for creation/update
+  status: 'active' | 'inactive'
+  fechaNacimiento?: string
+  pais?: string
+  aceptaTerminos: boolean
   roleId: string
   role?: Role
-  status: 'active' | 'inactive'
+  // Additional profile fields
+  telefono?: string
+  direccion?: string
+  ciudad?: string
+  avatar?: string
+  preferencias?: UserPreferences
+  // Timestamps
   createdAt: string
   updatedAt: string
+  lastLoginAt?: string
+}
+
+export interface UserPreferences {
+  language: 'es' | 'en'
+  timezone: string
+  notifications: NotificationPreferences
+  marketing: MarketingPreferences
+}
+
+export interface NotificationPreferences {
+  email: boolean
+  push: boolean
+  sms: boolean
+  eventReminders: boolean
+  promotions: boolean
+}
+
+export interface MarketingPreferences {
+  newsletter: boolean
+  eventRecommendations: boolean
+  partnerOffers: boolean
 }
 
 export interface Role {
   id: string
-  nombre: string
+  nombre: 'admin' | 'organizer' | 'customer'
   descripcion: string
   permissions?: Permission[]
+  createdAt: string
+  updatedAt?: string
 }
 
 export interface Permission {
   id: string
   nombre: string
   descripcion: string
+  module: 'users' | 'events' | 'tickets' | 'rbac' | 'reports'
+  action: 'create' | 'read' | 'update' | 'delete' | 'manage'
+  scope: 'own' | 'any' | 'none'
+  createdAt: string
+}
+
+export interface RoleHasPermission {
+  roleId: string
+  permissionId: string
+  createdAt: string
 }
 
 export interface AuthResponse {
   user: User
   token: string
+  refreshToken?: string
+  expiresIn: number
+}
+
+export interface RefreshTokenResponse {
+  token: string
+  expiresIn: number
+}
+
+// User Management Types
+export interface UserFilters {
+  search?: string
+  role?: string
+  status?: 'active' | 'inactive'
+  country?: string
+  dateFrom?: string
+  dateTo?: string
+  page?: number
+  limit?: number
+}
+
+export interface CreateUserRequest {
+  nombre: string
+  apellido: string
+  email: string
+  password: string
+  fechaNacimiento?: string
+  pais?: string
+  roleId: string
+  status?: 'active' | 'inactive'
+}
+
+export interface UpdateUserRequest {
+  nombre?: string
+  apellido?: string
+  email?: string
+  fechaNacimiento?: string
+  pais?: string
+  telefono?: string
+  direccion?: string
+  ciudad?: string
+  status?: 'active' | 'inactive'
+  roleId?: string
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string
+  newPassword: string
+  confirmPassword: string
+}
+
+export interface ResetPasswordRequest {
+  email: string
+}
+
+export interface ConfirmResetPasswordRequest {
+  token: string
+  newPassword: string
+  confirmPassword: string
 }
 
 // Event Types
@@ -192,7 +296,7 @@ export interface WebSocketPushNotification {
   type: 'success' | 'warning' | 'error' | 'info'
   title: string
   message: string
-  data?: any
+  data?: Record<string, unknown>
   priority: 'high' | 'normal' | 'low'
   requiresAction: boolean
   timestamp: string
@@ -222,6 +326,24 @@ export interface EventForm {
   venueId: string
 }
 
+export interface EventCreateRequest {
+  nombre: string
+  descripcion: string
+  fechaInicio: string
+  fechaFin: string
+  categoryId: string
+  venueId: string
+}
+
+export interface EventUpdateRequest {
+  nombre?: string
+  descripcion?: string
+  fechaInicio?: string
+  fechaFin?: string
+  categoryId?: string
+  venueId?: string
+}
+
 export interface TicketTypeForm {
   name: string
   description?: string
@@ -229,11 +351,20 @@ export interface TicketTypeForm {
   quantity: number
 }
 
+export interface OrderCreateRequest {
+  items: Array<{
+    ticketTypeId: string
+    quantity: number
+  }>
+  paymentMethod: 'credit_card' | 'paypal' | 'stripe'
+  paymentDetails?: Record<string, unknown>
+}
+
 // API Response Types
 export interface ApiError {
   message: string
   code?: string
-  details?: any
+  details?: Record<string, unknown>
 }
 
 export interface PaginationInfo {
@@ -296,8 +427,133 @@ export interface NotificationLog {
   recipient: string
   template: string
   status: 'sent' | 'failed' | 'pending'
-  content: any
+  content: Record<string, unknown>
   failReason?: string
   sentAt?: string
   createdAt: string
+}
+
+// Dashboard and Analytics Types
+export interface AdminDashboardStats {
+  totalUsers: number
+  activeUsers: number
+  totalRoles: number
+  totalPermissions: number
+  roleDistribution: Array<{
+    role: string
+    count: number
+  }>
+  inactiveUsers?: number
+  usersByRole?: UsersByRole
+  recentRegistrations?: number
+  dailyRegistrations?: DailyRegistration[]
+  topCountries?: CountryStats[]
+  userGrowth?: GrowthStats[]
+}
+
+export interface UsersByRole {
+  admin: number
+  organizer: number
+  customer: number
+}
+
+export interface DailyRegistration {
+  date: string
+  count: number
+}
+
+export interface CountryStats {
+  country: string
+  count: number
+  percentage: number
+}
+
+export interface GrowthStats {
+  period: string
+  users: number
+  growth: number
+}
+
+export interface UserActivity {
+  id: string
+  userId: string
+  action: string
+  details: string
+  ipAddress?: string
+  userAgent?: string
+  createdAt: string
+  user?: User
+}
+
+export interface AuditLog {
+  id: string
+  userId: string
+  action: 'CREATE' | 'UPDATE' | 'DELETE' | 'LOGIN' | 'LOGOUT'
+  resource: 'USER' | 'ROLE' | 'PERMISSION'
+  resourceId?: string
+  oldValues?: Record<string, unknown>
+  newValues?: Record<string, unknown>
+  ipAddress?: string
+  userAgent?: string
+  createdAt: string
+  user?: User
+}
+
+// Quick Action Types
+export interface QuickAction {
+  id: string
+  title: string
+  description: string
+  icon: string
+  color: string
+  action: () => void
+  permissions?: string[]
+}
+
+// Data Table Types
+export interface DataTableColumn<T> {
+  key: keyof T
+  title: string
+  sortable?: boolean
+  filterable?: boolean
+  render?: (value: unknown, item: T) => React.ReactNode
+}
+
+export interface DataTableFilter {
+  key: string
+  value: unknown
+  operator: 'eq' | 'ne' | 'gt' | 'lt' | 'contains' | 'in'
+}
+
+export interface DataTableSort {
+  key: string
+  direction: 'asc' | 'desc'
+}
+
+// Development Types for Quick Testing
+export interface DevUser {
+  role: 'admin' | 'organizer' | 'customer'
+  email: string
+  token: string
+  user: User
+}
+
+// Export/Import Types
+export interface ExportOptions {
+  format: 'csv' | 'xlsx' | 'json'
+  fields: string[]
+  filters?: UserFilters
+}
+
+export interface ImportResult {
+  success: number
+  failed: number
+  errors: ImportError[]
+}
+
+export interface ImportError {
+  row: number
+  field: string
+  message: string
+  value: unknown
 }

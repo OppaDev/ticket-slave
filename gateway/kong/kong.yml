@@ -7,7 +7,8 @@ _comment: "Configuración de Kong como API Gateway y balanceador de carga con fo
 services:
   # --- Servicio ms-tickets ---
   - name: service-tickets
-    url: http://host.docker.internal:3000
+    #url: http://host.docker.internal:3010
+    url: http://172.21.101.101:3000
     protocol: http
     connect_timeout: 5000
     read_timeout: 60000
@@ -69,7 +70,8 @@ services:
 
   # --- Servicio ms-usuarios ---
   - name: service-users
-    url: http://host.docker.internal:3010
+    #url: http://host.docker.internal:3010
+    url: http://172.21.101.101:3010
     protocol: http
     connect_timeout: 5000
     read_timeout: 30000
@@ -124,7 +126,8 @@ services:
 
   # --- Servicio ms-eventos ---
   - name: service-events
-    url: http://host.docker.internal:3005
+    #url: http://host.docker.internal:3010
+    url: http://172.21.101.101:3005
     protocol: http
     connect_timeout: 5000
     read_timeout: 30000
@@ -186,7 +189,8 @@ services:
 
   # --- Servicio ms-notifications ---
   - name: service-notifications
-    url: http://host.docker.internal:3001
+    #url: http://host.docker.internal:3010
+    url: http://172.21.101.101:3001
     protocol: http
     connect_timeout: 5000
     read_timeout: 30000

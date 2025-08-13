@@ -10,18 +10,7 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 app.use(express.json());
-/*Para que cualquier cliente/dominio
-pueda hacer peticiones a nuestra API*/
-// const whitelist = ['http//localhost:8080'];//para permitir el acceso a dominios especificos
-// const corsOptions = {
-//   origin: (origin, callback) => {
-//     if(whitelist.includes(origin) || !origin){
-//       callback(null, true);
-//     } else {
-//       callback(new Error('Not allowed by CORS'));
-//     }
-//   }
-// }
+
 app.use(cors());
 
 require ('./utils/auth');

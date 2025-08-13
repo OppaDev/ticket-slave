@@ -29,11 +29,7 @@ export default function EventsPage() {
       try {
         setLoading(true)
         const [eventsResponse, categoriesResponse] = await Promise.all([
-          eventsAPI.getEvents({ 
-            search: searchQuery || undefined, 
-            category: selectedCategory !== 'all' ? selectedCategory : undefined,
-            page: currentPage 
-          }),
+          eventsAPI.getEvents(),
           eventsAPI.getCategories()
         ])
         

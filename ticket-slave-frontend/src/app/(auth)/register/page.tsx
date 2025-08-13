@@ -1,14 +1,17 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/hooks/use-auth'
+import { rbacAPI } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
 import { Eye, EyeOff, Loader2, UserPlus } from 'lucide-react'
+import type { Role } from '@/types'
 
 export default function RegisterPage() {
   const { register, loading } = useAuth()
@@ -17,17 +20,46 @@ export default function RegisterPage() {
     apellido: '',
     email: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    roleId: '',
+    fechaNacimiento: '',
+    pais: '',
+    aceptaTerminos: false
   })
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+
+  // Fetch roles for dropdown (solo customer por defecto en registro público)
+  useEffect(() => {
+    const fetchRoles = async () => {
+      try {
+        const response = await rbacAPI.getRoles()
+        const customerRole = response.data.find((role: Role) => role.nombre === 'customer')
+        if (customerRole) {
+          setFormData(prev => ({ ...prev, roleId: customerRole.id }))
+        }
+      } catch (error) {
+        console.error('Error fetching roles:', error)
+        // Si no se pueden cargar roles, usar un rol por defecto
+        setFormData(prev => ({ ...prev, roleId: '3' })) // Asumiendo que customer es ID 3
+      }
+    }
+
+    fetchRoles()
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
     // Validaciones
-    if (!formData.nombre || !formData.apellido || !formData.email || !formData.password || !formData.confirmPassword) {
+    if (!formData.nombre || !formData.apellido || !formData.email || !formData.password || 
+        !formData.confirmPassword || !formData.fechaNacimiento || !formData.pais) {
       toast.error('Por favor completa todos los campos')
+      return
+    }
+
+    if (!formData.aceptaTerminos) {
+      toast.error('Debes aceptar los términos y condiciones')
       return
     }
 
@@ -42,6 +74,7 @@ export default function RegisterPage() {
     }
 
     try {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { confirmPassword, ...userData } = formData
       await register(userData)
       toast.success('¡Cuenta creada exitosamente! Bienvenido a Ticket Slave')
@@ -52,11 +85,32 @@ export default function RegisterPage() {
   }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, type, checked, value } = e.target
     setFormData(prev => ({
       ...prev,
-      [e.target.name]: e.target.value
+      [name]: type === 'checkbox' ? checked : value
     }))
   }
+
+  const handleSelectChange = (field: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }))
+  }
+
+  const countries = [
+    { code: 'EC', name: 'Ecuador' },
+    { code: 'CO', name: 'Colombia' },
+    { code: 'PE', name: 'Perú' },
+    { code: 'VE', name: 'Venezuela' },
+    { code: 'BR', name: 'Brasil' },
+    { code: 'AR', name: 'Argentina' },
+    { code: 'CL', name: 'Chile' },
+    { code: 'UY', name: 'Uruguay' },
+    { code: 'PY', name: 'Paraguay' },
+    { code: 'BO', name: 'Bolivia' },
+  ]
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-emerald-100 p-4">
@@ -117,6 +171,37 @@ export default function RegisterPage() {
                 disabled={loading}
                 required
               />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="fechaNacimiento">Fecha de Nacimiento</Label>
+                <Input
+                  id="fechaNacimiento"
+                  name="fechaNacimiento"
+                  type="date"
+                  value={formData.fechaNacimiento}
+                  onChange={handleInputChange}
+                  disabled={loading}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="pais">País</Label>
+                <Select value={formData.pais} onValueChange={(value) => handleSelectChange('pais', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona tu país" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {countries.map((country) => (
+                      <SelectItem key={country.code} value={country.code}>
+                        {country.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             
             <div className="space-y-2">
@@ -181,12 +266,16 @@ export default function RegisterPage() {
             
             <div className="flex items-start space-x-2">
               <input
-                id="terms"
+                id="aceptaTerminos"
+                name="aceptaTerminos"
                 type="checkbox"
                 className="h-4 w-4 text-green-600 border-gray-300 rounded focus:ring-green-500 mt-1"
+                checked={formData.aceptaTerminos}
+                onChange={handleInputChange}
+                disabled={loading}
                 required
               />
-              <Label htmlFor="terms" className="text-sm leading-5">
+              <Label htmlFor="aceptaTerminos" className="text-sm leading-5">
                 Acepto los{' '}
                 <Link href="/terms" className="text-green-600 hover:text-green-500">
                   términos y condiciones

@@ -25,16 +25,22 @@ export function useAuthProvider() {
   const isOrganizer = user?.role?.nombre === 'organizer'
   const isCustomer = user?.role?.nombre === 'customer'
 
-  // Initialize auth state
+  // Initialize auth state - SIN /api/v1/auth/me ya que NO existe en el HAR
   useEffect(() => {
     const initAuth = async () => {
       const token = getAuthToken()
       if (token) {
         try {
-          const response = await authAPI.getCurrentUser()
-          setUser(response.data.user || response.data)
+          // Como no hay endpoint /auth/me, guardamos datos del usuario en localStorage durante login
+          const userData = localStorage.getItem('user_data')
+          if (userData) {
+            setUser(JSON.parse(userData))
+          } else {
+            // Si no hay datos guardados, removemos el token inválido
+            removeAuthToken()
+          }
         } catch (error) {
-          console.error('Failed to get current user:', error)
+          console.error('Failed to get user data from storage:', error)
           removeAuthToken()
         }
       }
@@ -54,15 +60,19 @@ export function useAuthProvider() {
       setAuthToken(authData.token)
       setUser(authData.user)
       
+      // Guardar datos del usuario en localStorage para persistir sin /auth/me
+      localStorage.setItem('user_data', JSON.stringify(authData.user))
+      
       // Redirect based on role
       if (authData.user.role?.nombre === 'admin' || authData.user.role?.nombre === 'organizer') {
         window.location.href = '/dashboard'
       } else {
         window.location.href = '/events'
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Login failed:', error)
-      throw new Error(error.response?.data?.message || 'Login failed')
+      const message = error instanceof Error ? error.message : 'Login failed'
+      throw new Error(message)
     } finally {
       setLoading(false)
     }
@@ -74,6 +84,10 @@ export function useAuthProvider() {
     apellido: string
     email: string
     password: string 
+    roleId: string
+    fechaNacimiento: string
+    pais: string
+    aceptaTerminos: boolean
   }) => {
     try {
       setLoading(true)
@@ -83,11 +97,15 @@ export function useAuthProvider() {
       setAuthToken(authData.token)
       setUser(authData.user)
       
+      // Guardar datos del usuario en localStorage para persistir sin /auth/me
+      localStorage.setItem('user_data', JSON.stringify(authData.user))
+      
       // Redirect to events page for new users
       window.location.href = '/events'
-    } catch (error: any) {
+    } catch (error) {
       console.error('Registration failed:', error)
-      throw new Error(error.response?.data?.message || 'Registration failed')
+      const message = error instanceof Error ? error.message : 'Registration failed'
+      throw new Error(message)
     } finally {
       setLoading(false)
     }
@@ -101,6 +119,7 @@ export function useAuthProvider() {
       console.error('Logout error:', error)
     } finally {
       removeAuthToken()
+      localStorage.removeItem('user_data') // Limpiar datos del usuario también
       setUser(null)
       window.location.href = '/login'
     }
