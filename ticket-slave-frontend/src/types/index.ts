@@ -127,6 +127,18 @@ export interface UpdateUserRequest {
   roleId?: string
 }
 
+// Role Management Types
+export interface CreateRoleRequest {
+  nombre: string
+  descripcion?: string
+  permissions?: string[]
+}
+
+export interface UpdateRoleRequest {
+  nombre?: string
+  descripcion?: string
+}
+
 export interface ChangePasswordRequest {
   currentPassword: string
   newPassword: string
@@ -143,31 +155,31 @@ export interface ConfirmResetPasswordRequest {
   confirmPassword: string
 }
 
-// Event Types
+// Event Types (basadas en HAR responses)
 export interface Event {
   id: string
   nombre: string
   descripcion: string
-  fechaInicio: string
-  fechaFin: string
+  fechaInicio: string  // ISO string "2025-10-01T00:00:00.000Z"
+  fechaFin: string     // ISO string "2025-10-02T00:00:00.000Z"
+  imagenUrl?: string | null
   status: 'BORRADOR' | 'PUBLICADO'
   categoryId: string
   venueId: string
   organizerId: string
+  createdAt: string
+  // Populated relations (incluidas en responses del HAR)
   category?: Category
   venue?: Venue
   organizer?: User
   ticketTypes?: TicketType[]
-  createdAt: string
-  updatedAt: string
 }
 
 export interface Category {
   id: string
   nombre: string
-  descripcion: string
+  descripcion?: string | null  // Puede ser null según HAR
   createdAt: string
-  updatedAt: string
 }
 
 export interface Venue {
@@ -176,19 +188,20 @@ export interface Venue {
   direccion: string
   ciudad: string
   pais: string
+  latitud?: number | null
+  longitud?: number | null
   organizerId: string
-  zones?: Zone[]
   createdAt: string
-  updatedAt: string
+  // Populated relations (incluidas en GET /venues/:id)
+  zones?: Zone[]
 }
 
 export interface Zone {
   id: string
   nombre: string
-  capacidad: number
+  capacidad: string | number  // API devuelve string a veces, number otras
   venueId: string
   createdAt: string
-  updatedAt: string
 }
 
 // Ticket Types
@@ -334,6 +347,17 @@ export interface EventForm {
   fechaFin: string
   categoryId: string
   venueId: string
+  imagenUrl?: string
+}
+
+export interface CreateEventRequest {
+  nombre: string
+  descripcion: string
+  fechaInicio: string
+  fechaFin: string
+  categoryId: string
+  venueId: string
+  imagenUrl?: string
 }
 
 export interface EventCreateRequest {
@@ -343,6 +367,7 @@ export interface EventCreateRequest {
   fechaFin: string
   categoryId: string
   venueId: string
+  imagenUrl?: string
 }
 
 export interface EventUpdateRequest {
@@ -352,6 +377,7 @@ export interface EventUpdateRequest {
   fechaFin?: string
   categoryId?: string
   venueId?: string
+  imagenUrl?: string
 }
 
 export interface TicketTypeForm {
@@ -576,4 +602,63 @@ export interface RecentActivity {
   action: string
   time: string
   timestamp: string
+}
+
+// Request Types for ms-eventos endpoints
+export interface CreateEventRequest {
+  nombre: string
+  descripcion: string
+  fechaInicio: string  // formato: "2025-10-01"
+  fechaFin: string     // formato: "2025-10-02"
+  categoryId: string
+  venueId: string
+  imagenUrl?: string
+}
+
+export interface UpdateEventRequest {
+  nombre?: string
+  descripcion?: string
+  fechaInicio?: string
+  fechaFin?: string
+  categoryId?: string
+  venueId?: string
+  imagenUrl?: string
+}
+
+export interface CreateCategoryRequest {
+  nombre: string
+  descripcion?: string
+}
+
+export interface UpdateCategoryRequest {
+  nombre?: string
+  descripcion?: string
+}
+
+export interface CreateVenueRequest {
+  nombre: string
+  direccion: string
+  ciudad: string
+  pais: string
+  latitud?: number | null
+  longitud?: number | null
+}
+
+export interface UpdateVenueRequest {
+  nombre?: string
+  direccion?: string
+  ciudad?: string
+  pais?: string
+  latitud?: number | null
+  longitud?: number | null
+}
+
+export interface CreateZoneRequest {
+  nombre: string
+  capacidad: number
+}
+
+export interface UpdateZoneRequest {
+  nombre?: string
+  capacidad?: number
 }

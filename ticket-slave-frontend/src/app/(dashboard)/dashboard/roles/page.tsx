@@ -1,11 +1,20 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { ProtectedRoute } from '@/components/auth/protected-route'
 import { rbacAPI } from '@/lib/api'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { 
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { 
   Crown, 
   Users as UsersIcon, 
@@ -13,7 +22,9 @@ import {
   Settings,
   Plus,
   RefreshCw,
-  Eye
+  Eye,
+  Edit,
+  Trash2
 } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Role } from '@/types'
@@ -31,8 +42,11 @@ const roleColors = {
 }
 
 export default function RolesPage() {
+  const router = useRouter()
   const [roles, setRoles] = useState<Role[]>([])
   const [loading, setLoading] = useState(true)
+  const [deleting, setDeleting] = useState(false)
+  const [roleToDelete, setRoleToDelete] = useState<Role | null>(null)
 
   // Fetch roles (basic info)
   const fetchRoles = async () => {
@@ -71,6 +85,22 @@ export default function RolesPage() {
     }
   }
 
+  // Delete role
+  const deleteRole = async (roleId: string) => {
+    try {
+      setDeleting(true)
+      await rbacAPI.deleteRole(roleId)
+      toast.success('Rol eliminado exitosamente')
+      setRoles(prev => prev.filter(role => role.id !== roleId))
+      setRoleToDelete(null)
+    } catch (error) {
+      console.error('Error deleting role:', error)
+      toast.error('Error al eliminar rol')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   useEffect(() => {
     fetchRoles()
   }, [])
@@ -103,7 +133,7 @@ export default function RolesPage() {
               <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
               Actualizar
             </Button>
-            <Button>
+            <Button onClick={() => router.push('/dashboard/roles/create')}>
               <Plus className="h-4 w-4 mr-2" />
               Nuevo Rol
             </Button>
@@ -214,11 +244,32 @@ export default function RolesPage() {
 
                     {/* Actions */}
                     <div className="flex gap-2 pt-2">
-                      <Button size="sm" variant="outline" className="flex-1">
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="flex-1"
+                        onClick={() => router.push(`/dashboard/roles/${role.id}`)}
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        Ver
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="flex-1"
+                        onClick={() => router.push(`/dashboard/roles/${role.id}/edit`)}
+                      >
+                        <Edit className="h-4 w-4 mr-1" />
                         Editar
                       </Button>
-                      <Button size="sm" variant="outline" className="flex-1">
-                        Permisos
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="flex-1 text-red-600 hover:text-red-700"
+                        onClick={() => setRoleToDelete(role)}
+                      >
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        Eliminar
                       </Button>
                     </div>
                   </CardContent>
@@ -227,6 +278,36 @@ export default function RolesPage() {
             })}
           </div>
         )}
+
+        {/* Delete Confirmation Modal */}
+        <Dialog open={!!roleToDelete} onOpenChange={() => setRoleToDelete(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Confirmar Eliminación</DialogTitle>
+              <DialogDescription>
+                ¿Estás seguro de que deseas eliminar el rol &quot;<strong>{roleToDelete?.nombre}</strong>&quot;?
+                <br /><br />
+                Esta acción no se puede deshacer. Todos los usuarios con este rol perderán sus permisos.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button 
+                variant="outline" 
+                onClick={() => setRoleToDelete(null)}
+                disabled={deleting}
+              >
+                Cancelar
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={() => roleToDelete && deleteRole(roleToDelete.id)}
+                disabled={deleting}
+              >
+                {deleting ? 'Eliminando...' : 'Eliminar'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </ProtectedRoute>
   )

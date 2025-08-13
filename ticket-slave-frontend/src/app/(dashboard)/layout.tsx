@@ -17,7 +17,10 @@ import {
   Calendar,
   Ticket,
   Bell,
-  Shield
+  Shield,
+  MapPin,
+  Tag,
+  Building
 } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
@@ -31,12 +34,22 @@ interface NavItem {
 }
 
 const navigation: NavItem[] = [
+  // Admin Dashboard
   {
-    name: 'Dashboard',
+    name: 'Admin Dashboard',
     href: '/dashboard',
     icon: Home,
-    requiredRoles: ['admin', 'organizer'],
+    requiredRoles: ['admin'],
   },
+  // Organizer Dashboard
+  {
+    name: 'Organizador',
+    href: '/organizer',
+    icon: Building,
+    requiredRoles: ['organizer'],
+  },
+  
+  // Admin-only sections
   {
     name: 'Usuarios',
     href: '/dashboard/users',
@@ -55,11 +68,33 @@ const navigation: NavItem[] = [
     icon: Shield,
     requiredPermissions: ['rbac:manage'],
   },
+  
+  // Organizer sections
   {
-    name: 'Eventos',
+    name: 'Mis Eventos',
+    href: '/organizer/events',
+    icon: Calendar,
+    requiredRoles: ['organizer'],
+  },
+  {
+    name: 'Mis Recintos',
+    href: '/organizer/venues',
+    icon: MapPin,
+    requiredRoles: ['organizer'],
+  },
+  {
+    name: 'Categorías',
+    href: '/organizer/categories',
+    icon: Tag,
+    requiredRoles: ['organizer'],
+  },
+  
+  // Shared sections
+  {
+    name: 'Todos los Eventos',
     href: '/dashboard/events',
     icon: Calendar,
-    requiredRoles: ['admin', 'organizer'],
+    requiredRoles: ['admin'],
   },
   {
     name: 'Tickets',
@@ -131,7 +166,11 @@ function Sidebar({ className = '' }: { className?: string }) {
           </div>
           <div>
             <h2 className="font-bold text-lg">Ticket Slave</h2>
-            <p className="text-sm text-gray-500">Admin Panel</p>
+            <p className="text-sm text-gray-500">
+              {user?.role?.nombre === 'admin' ? 'Admin Panel' : 
+               user?.role?.nombre === 'organizer' ? 'Organizador' : 
+               'Panel de Usuario'}
+            </p>
           </div>
         </div>
         
@@ -161,18 +200,35 @@ function Sidebar({ className = '' }: { className?: string }) {
       </div>
 
       {/* Navigation */}
-      <div className="flex-1 px-4 py-6 space-y-2">
+      <div className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
         {filteredNavigation.map((item) => {
           const Icon = item.icon
+          const showSeparator = 
+            (item.href === '/dashboard/users' && filteredNavigation.some(nav => nav.href === '/dashboard')) ||
+            (item.href === '/organizer/events' && filteredNavigation.some(nav => nav.href === '/organizer')) ||
+            (item.href === '/dashboard/events' && filteredNavigation.some(nav => nav.href === '/organizer/categories')) ||
+            (item.href === '/dashboard/tickets')
+          
           return (
-            <Link 
-              key={item.name}
-              href={item.href}
-              className="flex items-center gap-3 px-3 py-2 text-gray-600 rounded-lg hover:bg-gray-100 hover:text-gray-900 transition-colors"
-            >
-              <Icon className="h-5 w-5" />
-              <span className="font-medium">{item.name}</span>
-            </Link>
+            <div key={item.name}>
+              {showSeparator && (
+                <div className="border-t border-gray-200 my-3 pt-3">
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 mb-2">
+                    {item.href.startsWith('/dashboard/users') ? 'Administración' :
+                     item.href.startsWith('/organizer/events') ? 'Gestión de Eventos' :
+                     item.href.startsWith('/dashboard/events') ? 'Sistema' :
+                     item.href.startsWith('/dashboard/tickets') ? 'Operaciones' : ''}
+                  </p>
+                </div>
+              )}
+              <Link 
+                href={item.href}
+                className="flex items-center gap-3 px-3 py-2 text-gray-600 rounded-lg hover:bg-gray-100 hover:text-gray-900 transition-colors"
+              >
+                <Icon className="h-5 w-5" />
+                <span className="font-medium">{item.name}</span>
+              </Link>
+            </div>
           )
         })}
       </div>

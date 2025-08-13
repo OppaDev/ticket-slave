@@ -1,5 +1,5 @@
 import axios, { AxiosResponse } from 'axios'
-import type { EventCreateRequest, EventUpdateRequest, OrderCreateRequest, User, Role } from '@/types'
+import type { OrderCreateRequest, User, Role } from '@/types'
 
 // Kong Gateway base URL
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
@@ -376,28 +376,134 @@ export const devAPI = {
   },
 }
 
-// Events (ms-eventos) - Placeholders para futura implementación
+// Events Management (ms-eventos) - Endpoints basados en HAR
 export const eventsAPI = {
+  // GET /api/v1/events - VERIFICADO en HAR
   getEvents: () =>
     api.get('/api/v1/events'),
     
+  // GET /api/v1/events/{id} - VERIFICADO en HAR
   getEvent: (id: string) =>
     api.get(`/api/v1/events/${id}`),
     
-  createEvent: (eventData: EventCreateRequest) =>
-    api.post('/api/v1/events', eventData),
+  // POST /api/v1/events - VERIFICADO en HAR (status 201)
+  createEvent: (eventData: {
+    nombre: string
+    descripcion: string
+    fechaInicio: string  // formato: "2025-10-01"
+    fechaFin: string     // formato: "2025-10-02"
+    categoryId: string
+    venueId: string
+    imagenUrl?: string
+  }) => api.post('/api/v1/events', eventData),
     
-  updateEvent: (id: string, eventData: EventUpdateRequest) =>
-    api.patch(`/api/v1/events/${id}`, eventData),
+  // PATCH /api/v1/events/{id} - VERIFICADO en HAR
+  updateEvent: (id: string, eventData: {
+    nombre?: string
+    descripcion?: string
+    fechaInicio?: string
+    fechaFin?: string
+    categoryId?: string
+    venueId?: string
+    imagenUrl?: string
+  }) => api.patch(`/api/v1/events/${id}`, eventData),
     
+  // POST /api/v1/events/{id}/publish - VERIFICADO en HAR
   publishEvent: (id: string) =>
     api.post(`/api/v1/events/${id}/publish`),
     
+  // DELETE /api/v1/events/{id} - Asumiendo endpoint disponible
+  deleteEvent: (id: string) =>
+    api.delete(`/api/v1/events/${id}`),
+}
+
+// Categories Management (ms-eventos) - Endpoints basados en HAR
+export const categoriesAPI = {
+  // GET /api/v1/categories - VERIFICADO en HAR
   getCategories: () =>
     api.get('/api/v1/categories'),
     
+  // GET /api/v1/categories/{id} - VERIFICADO en HAR
+  getCategory: (id: string) =>
+    api.get(`/api/v1/categories/${id}`),
+    
+  // POST /api/v1/categories - VERIFICADO en HAR (status 201)
+  createCategory: (categoryData: {
+    nombre: string
+    descripcion?: string
+  }) => api.post('/api/v1/categories', categoryData),
+    
+  // PATCH /api/v1/categories/{id} - VERIFICADO en HAR
+  updateCategory: (id: string, categoryData: {
+    nombre?: string
+    descripcion?: string
+  }) => api.patch(`/api/v1/categories/${id}`, categoryData),
+    
+  // DELETE /api/v1/categories/{id} - VERIFICADO en HAR (status 201)
+  deleteCategory: (id: string) =>
+    api.delete(`/api/v1/categories/${id}`),
+}
+
+// Venues Management (ms-eventos) - Endpoints basados en HAR
+export const venuesAPI = {
+  // GET /api/v1/venues - VERIFICADO en HAR
   getVenues: () =>
     api.get('/api/v1/venues'),
+    
+  // GET /api/v1/venues/{id} - VERIFICADO en HAR
+  getVenue: (id: string) =>
+    api.get(`/api/v1/venues/${id}`),
+    
+  // POST /api/v1/venues - VERIFICADO en HAR (status 201)
+  createVenue: (venueData: {
+    nombre: string
+    direccion: string
+    ciudad: string
+    pais: string
+    latitud?: number | null
+    longitud?: number | null
+  }) => api.post('/api/v1/venues', venueData),
+    
+  // PATCH /api/v1/venues/{id} - VERIFICADO en HAR
+  updateVenue: (id: string, venueData: {
+    nombre?: string
+    direccion?: string
+    ciudad?: string
+    pais?: string
+    latitud?: number | null
+    longitud?: number | null
+  }) => api.patch(`/api/v1/venues/${id}`, venueData),
+    
+  // DELETE /api/v1/venues/{id} - VERIFICADO en HAR (status 201)
+  deleteVenue: (id: string) =>
+    api.delete(`/api/v1/venues/${id}`),
+}
+
+// Zones Management (ms-eventos) - Endpoints basados en HAR
+export const zonesAPI = {
+  // GET /api/v1/venues/{venueId}/zones - VERIFICADO en HAR
+  getVenueZones: (venueId: string) =>
+    api.get(`/api/v1/venues/${venueId}/zones`),
+    
+  // GET /api/v1/venues/{venueId}/zones/{id} - VERIFICADO en HAR
+  getVenueZone: (venueId: string, zoneId: string) =>
+    api.get(`/api/v1/venues/${venueId}/zones/${zoneId}`),
+    
+  // POST /api/v1/venues/{venueId}/zones - VERIFICADO en HAR (status 201)
+  createVenueZone: (venueId: string, zoneData: {
+    nombre: string
+    capacidad: number
+  }) => api.post(`/api/v1/venues/${venueId}/zones`, zoneData),
+    
+  // PATCH /api/v1/venues/{venueId}/zones/{id} - VERIFICADO en HAR
+  updateVenueZone: (venueId: string, zoneId: string, zoneData: {
+    nombre?: string
+    capacidad?: number
+  }) => api.patch(`/api/v1/venues/${venueId}/zones/${zoneId}`, zoneData),
+    
+  // DELETE /api/v1/venues/{venueId}/zones/{id} - VERIFICADO en HAR (status 201)
+  deleteVenueZone: (venueId: string, zoneId: string) =>
+    api.delete(`/api/v1/venues/${venueId}/zones/${zoneId}`),
 }
 
 // Tickets (ms-tickets)
