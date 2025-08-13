@@ -1,7 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { eventsAPI } from '@/lib/api'
+import Image from 'next/image'
+import Link from 'next/link'
+import { eventsAPI, categoriesAPI } from '@/lib/api'
 import { useTicketsWebSocket } from '@/hooks/use-websocket'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,15 +13,16 @@ import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 import { Search, Calendar, MapPin, Users, Filter, Loader2 } from 'lucide-react'
 import type { Event, Category } from '@/types'
-import Link from 'next/link'
 
 export default function EventsPage() {
-  const [events, setEvents] = useState<Event[]>([])
+  const [allEvents, setAllEvents] = useState<Event[]>([])
+  const [filteredEvents, setFilteredEvents] = useState<Event[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [currentPage, setCurrentPage] = useState(1)
+  const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({})
 
   const { joinEvent, leaveEvent, onStockUpdate } = useTicketsWebSocket()
 
@@ -30,10 +33,14 @@ export default function EventsPage() {
         setLoading(true)
         const [eventsResponse, categoriesResponse] = await Promise.all([
           eventsAPI.getEvents(),
-          eventsAPI.getCategories()
+          categoriesAPI.getCategories()
         ])
         
-        setEvents(eventsResponse.data.data || eventsResponse.data)
+        // Solo mostrar eventos publicados en la vista pública
+        const publishedEvents = (eventsResponse.data.data || eventsResponse.data)
+          .filter((event: Event) => event.status === 'PUBLICADO')
+        
+        setAllEvents(publishedEvents)
         setCategories(categoriesResponse.data.data || categoriesResponse.data)
       } catch (error: unknown) {
         console.error('Error fetching data:', error)
@@ -44,7 +51,29 @@ export default function EventsPage() {
     }
 
     fetchData()
-  }, [searchQuery, selectedCategory, currentPage])
+  }, [])
+
+  // Filter events based on search and category
+  useEffect(() => {
+    let filtered = allEvents
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      filtered = filtered.filter(event =>
+        event.nombre.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        event.descripcion?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        event.category?.nombre.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    }
+
+    // Filter by category
+    if (selectedCategory !== 'all') {
+      filtered = filtered.filter(event => event.categoryId === selectedCategory)
+    }
+
+    setFilteredEvents(filtered)
+    setCurrentPage(1) // Reset to first page when filters change
+  }, [allEvents, searchQuery, selectedCategory])
 
   // Setup WebSocket for real-time stock updates
   useEffect(() => {
@@ -57,8 +86,19 @@ export default function EventsPage() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
-    setCurrentPage(1)
+    // El filtrado se maneja automáticamente por el useEffect
   }
+
+  const handleImageError = (eventId: string) => {
+    setImageErrors(prev => ({ ...prev, [eventId]: true }))
+  }
+
+  // Pagination logic
+  const itemsPerPage = 9
+  const totalPages = Math.ceil(filteredEvents.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const currentEvents = filteredEvents.slice(startIndex, endIndex)
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('es-ES', {
@@ -74,20 +114,16 @@ export default function EventsPage() {
     const now = new Date()
     const startDate = new Date(event.fechaInicio)
     const endDate = new Date(event.fechaFin)
-
-    if (event.status === 'BORRADOR') {
-      return { label: 'Borrador', variant: 'secondary' as const }
-    }
     
     if (now > endDate) {
-      return { label: 'Finalizado', variant: 'outline' as const }
+      return { label: 'Finalizado', variant: 'secondary' as const }
     }
     
     if (now >= startDate && now <= endDate) {
       return { label: 'En Curso', variant: 'default' as const }
     }
     
-    return { label: 'Próximamente', variant: 'default' as const }
+    return { label: 'Próximamente', variant: 'outline' as const }
   }
 
   if (loading) {
@@ -113,7 +149,14 @@ export default function EventsPage() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Eventos</h1>
-              <p className="text-gray-600 mt-1">Descubre los mejores eventos cerca de ti</p>
+              <p className="text-gray-600 mt-1">
+                Descubre los mejores eventos cerca de ti
+                {!loading && filteredEvents.length > 0 && (
+                  <span className="ml-2 text-sm font-medium text-blue-600">
+                    ({filteredEvents.length} evento{filteredEvents.length !== 1 ? 's' : ''} disponible{filteredEvents.length !== 1 ? 's' : ''})
+                  </span>
+                )}
+              </p>
             </div>
             <div className="flex items-center space-x-4">
               <Link href="/login">
@@ -167,11 +210,24 @@ export default function EventsPage() {
 
         {/* Events Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {events.map((event) => {
+          {currentEvents.map((event) => {
             const status = getEventStatus(event)
             
             return (
-              <Card key={event.id} className="hover:shadow-md transition-shadow">
+              <Card key={event.id} className="hover:shadow-md transition-shadow overflow-hidden">
+                {/* Event Image */}
+                {event.imagenUrl && !imageErrors[event.id] && (
+                  <div className="relative h-48 w-full">
+                    <Image
+                      src={event.imagenUrl}
+                      alt={event.nombre}
+                      fill
+                      className="object-cover"
+                      onError={() => handleImageError(event.id)}
+                    />
+                  </div>
+                )}
+                
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -188,19 +244,23 @@ export default function EventsPage() {
                 
                 <CardContent className="space-y-3">
                   <div className="flex items-center text-sm text-gray-600">
-                    <Calendar className="h-4 w-4 mr-2" />
-                    {formatDate(event.fechaInicio)}
+                    <Calendar className="h-4 w-4 mr-2 flex-shrink-0" />
+                    <span className="truncate">{formatDate(event.fechaInicio)}</span>
                   </div>
                   
                   <div className="flex items-center text-sm text-gray-600">
-                    <MapPin className="h-4 w-4 mr-2" />
-                    {event.venue?.nombre || 'Venue no especificado'}
+                    <MapPin className="h-4 w-4 mr-2 flex-shrink-0" />
+                    <span className="truncate">
+                      {event.venue?.nombre || 'Ubicación no especificada'}
+                    </span>
                   </div>
                   
-                  <div className="flex items-center text-sm text-gray-600">
-                    <Users className="h-4 w-4 mr-2" />
-                    Organizado por {event.organizer?.nombre || 'Organizador'}
-                  </div>
+                  {event.venue?.ciudad && (
+                    <div className="flex items-center text-sm text-gray-600">
+                      <Users className="h-4 w-4 mr-2 flex-shrink-0" />
+                      <span className="truncate">{event.venue.ciudad}, {event.venue.pais}</span>
+                    </div>
+                  )}
                   
                   <p className="text-sm text-gray-700 line-clamp-2">
                     {event.descripcion}
@@ -209,17 +269,16 @@ export default function EventsPage() {
                 
                 <CardFooter className="flex justify-between items-center">
                   <div className="text-sm text-gray-500">
-                    {event.ticketTypes?.length || 0} tipos de ticket
+                    Ver detalles
                   </div>
                   
                   <Link href={`/events/${event.id}`}>
                     <Button 
                       size="sm"
-                      disabled={event.status === 'BORRADOR'}
                       onMouseEnter={() => joinEvent(event.id)}
                       onMouseLeave={() => leaveEvent(event.id)}
                     >
-                      {event.status === 'BORRADOR' ? 'No Disponible' : 'Ver Detalles'}
+                      Comprar Tickets
                     </Button>
                   </Link>
                 </CardFooter>
@@ -229,7 +288,7 @@ export default function EventsPage() {
         </div>
 
         {/* Empty State */}
-        {events.length === 0 && !loading && (
+        {filteredEvents.length === 0 && !loading && (
           <div className="text-center py-12">
             <div className="bg-white rounded-lg shadow-sm p-8">
               <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -242,14 +301,26 @@ export default function EventsPage() {
                   : 'No hay eventos publicados en este momento'
                 }
               </p>
+              {(searchQuery || selectedCategory !== 'all') && (
+                <Button 
+                  variant="outline" 
+                  className="mt-4"
+                  onClick={() => {
+                    setSearchQuery('')
+                    setSelectedCategory('all')
+                  }}
+                >
+                  Limpiar filtros
+                </Button>
+              )}
             </div>
           </div>
         )}
 
         {/* Pagination */}
-        {events.length > 0 && (
+        {filteredEvents.length > itemsPerPage && (
           <div className="flex justify-center mt-8">
-            <div className="flex space-x-2">
+            <div className="flex items-center space-x-2">
               <Button 
                 variant="outline" 
                 onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
@@ -257,16 +328,37 @@ export default function EventsPage() {
               >
                 Anterior
               </Button>
-              <span className="flex items-center px-4 py-2 text-sm text-gray-700">
-                Página {currentPage}
-              </span>
+              
+              <div className="flex items-center space-x-1">
+                {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                  const pageNumber = i + 1
+                  return (
+                    <Button
+                      key={pageNumber}
+                      variant={currentPage === pageNumber ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setCurrentPage(pageNumber)}
+                    >
+                      {pageNumber}
+                    </Button>
+                  )
+                })}
+                {totalPages > 5 && (
+                  <span className="px-2 text-gray-500">...</span>
+                )}
+              </div>
+              
               <Button 
                 variant="outline" 
-                onClick={() => setCurrentPage(prev => prev + 1)}
-                disabled={events.length < 10} // Assuming 10 items per page
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
               >
                 Siguiente
               </Button>
+            </div>
+            
+            <div className="ml-4 flex items-center text-sm text-gray-600">
+              Mostrando {startIndex + 1}-{Math.min(endIndex, filteredEvents.length)} de {filteredEvents.length} eventos
             </div>
           </div>
         )}
