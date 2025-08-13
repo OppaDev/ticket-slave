@@ -4,6 +4,8 @@ const TicketType = require('./ticketType.model');
 const { Cart, CartItem } = require('./cart.model');
 const { Order, OrderItem } = require('./order.model');
 const Ticket = require('./ticket.model');
+const EventReplica = require('./eventReplica.model');
+const CategoryReplica = require('./categoryReplica.model');
 
 // Importar modelos
 const db = {
@@ -13,7 +15,9 @@ const db = {
     CartItem,
     Order,
     OrderItem,
-    Ticket
+    Ticket,
+    EventReplica,
+    CategoryReplica
 };
 
 // --- Definir Asociaciones ---

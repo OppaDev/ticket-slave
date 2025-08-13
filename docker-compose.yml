@@ -58,6 +58,25 @@ services:
       - cockroach3
     command: init --insecure --host=crdb-node1:26257
 
+  # Creador de bases de datos
+  database-setup:
+    image: cockroachdb/cockroach:latest
+    container_name: database-setup
+    networks:
+      - roach-net
+    depends_on:
+      - roach-init
+    command: >
+      bash -c "
+      sleep 10 &&
+      cockroach sql --insecure --host=crdb-node1:26257 --execute='CREATE DATABASE IF NOT EXISTS ms_eventos;' &&
+      cockroach sql --insecure --host=crdb-node1:26257 --execute='CREATE DATABASE IF NOT EXISTS ms_usuarios;' &&
+      cockroach sql --insecure --host=crdb-node1:26257 --execute='CREATE DATABASE IF NOT EXISTS ms_tickets;' &&
+      cockroach sql --insecure --host=crdb-node1:26257 --execute='CREATE DATABASE IF NOT EXISTS ms_notifications;' &&
+      echo 'Bases de datos creadas exitosamente'
+      "
+    restart: "no"
+
   # RabbitMQ
   rabbitmq:
     image: rabbitmq:3.12-management
@@ -68,7 +87,7 @@ services:
       - "15672:15672" # Management UI
     environment:
       RABBITMQ_DEFAULT_USER: admin
-      RABBITMQ_DEFAULT_PASS: admin
+      RABBITMQ_DEFAULT_PASS: password
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     networks:

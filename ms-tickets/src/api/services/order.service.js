@@ -4,6 +4,8 @@ const { NotFoundError, ConflictError, BadRequestError } = require('../../utils/e
 const cartService = require('./cart.service'); // Reutilizamos el servicio de carrito
 const ticketService = require('./ticket.service');
 const publisherService = require('./publisher.service');
+const websocketService = require('./websocket.service');
+const ticketTypeService = require('./ticketType.service');
 
 // Simulación de un servicio de pasarela de pago
 const paymentGatewayService = {
@@ -44,15 +46,35 @@ class OrderService {
             }
             totalAmount = parseFloat(totalAmount.toFixed(2));
 
-            // 3. Procesar el pago
+            // 3. Notificar inicio de procesamiento de pago
+            websocketService.notifyPaymentStatus(userId, {
+                status: 'processing',
+                amount: totalAmount,
+                message: 'Procesando pago...'
+            });
+
+            // 4. Procesar el pago
             const paymentResult = await paymentGatewayService.processPayment(
                 paymentDetails.paymentMethodId,
                 totalAmount
             );
 
             if (!paymentResult.success) {
+                // Notificar fallo de pago
+                websocketService.notifyPaymentStatus(userId, {
+                    status: 'failed',
+                    amount: totalAmount,
+                    message: `Error de pago: ${paymentResult.message}`
+                });
                 throw new BadRequestError(`Error de pago: ${paymentResult.message}`); // En API real sería 402 Payment Required
             }
+
+            // Notificar éxito de pago
+            websocketService.notifyPaymentStatus(userId, {
+                status: 'success',
+                amount: totalAmount,
+                message: 'Pago procesado exitosamente'
+            });
 
             // 4. Crear el pedido
             const order = await Order.create({
@@ -82,6 +104,10 @@ class OrderService {
 
                 // *** NUEVO: Generar las entradas para este OrderItem ***
                 await ticketService.generateTicketsForOrderItem(orderItem, transaction);
+
+                // *** WebSocket: Notificar cambio de stock ***
+                const updatedTicketType = await TicketType.findByPk(item.ticketTypeId);
+                ticketTypeService.notifyStockChange(updatedTicketType);
             }
 
             // 6. Vaciar el carrito
@@ -89,6 +115,14 @@ class OrderService {
 
             // Si todo fue exitoso hasta aquí, confirmar la transacción
             await transaction.commit();
+
+            // *** WebSocket: Notificar tickets generados ***
+            const totalTickets = cart.items.reduce((sum, item) => sum + item.quantity, 0);
+            websocketService.notifyTicketsGenerated(userId, {
+                orderId: order.id,
+                ticketsCount: totalTickets,
+                downloadUrl: `/api/v1/orders/${order.id}/tickets`
+            });
 
             // Preparar datos para retornar
             const orderResponse = {

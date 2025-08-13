@@ -2,6 +2,7 @@ require('dotenv').config();
 const app = require('./app');
 const { sequelize } = require('./api/models');
 const consumerService = require('./api/services/consumer.service');
+const websocketService = require('./api/services/websocket.service');
 
 const PORT = process.env.PORT || 3001;
 
@@ -23,6 +24,9 @@ const startServer = async () => {
             console.log(`📱 Entorno: ${process.env.NODE_ENV}`);
             console.log(`🌍 URL Health Check: http://localhost:${PORT}/health`);
         });
+
+        // Inicializar WebSocket Server
+        websocketService.initialize(server);
 
         // Manejo de cierre graceful
         const gracefulShutdown = async () => {

@@ -2,6 +2,7 @@
 const { Ticket, OrderItem, TicketType } = require('../models');
 const { NotFoundError, ConflictError, AppError } = require('../../utils/errors');
 const crypto = require('crypto'); // Para firmar el QR
+const websocketService = require('./websocket.service');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'tu-jwt-secret-super-secreto';
 
@@ -102,6 +103,15 @@ class TicketService {
         ticket.status = 'USED';
         ticket.checkInTimestamp = new Date();
         await ticket.save();
+
+        // *** WebSocket: Notificar validación de ticket ***
+        websocketService.notifyTicketValidated(ticket.eventId, {
+            ticketCode: ticket.ticketCode,
+            userId: ticket.userId,
+            timestamp: ticket.checkInTimestamp,
+            status: 'valid',
+            message: 'Ticket validado correctamente'
+        });
 
         return { status: 'VALIDADO', message: 'Acceso permitido.', ticket };
     }

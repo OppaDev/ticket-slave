@@ -59,6 +59,13 @@ services:
           - DELETE
           - PATCH
           - OPTIONS
+      - name: tickets-websocket
+        paths:
+          - /ws-tickets
+        strip_path: true
+        protocols:
+          - http
+          - https
 
   # --- Servicio ms-usuarios ---
   - name: service-users
@@ -158,7 +165,48 @@ services:
           - DELETE
           - PATCH
           - OPTIONS
-     
+      - name: eventos-websocket
+        paths:
+          - /ws-eventos
+        strip_path: true
+        protocols:
+          - http
+          - https
+      - name: eventos-status
+        paths:
+          - /eventos/status
+        strip_path: false
+        methods:
+          - GET
+        plugins:
+          - name: request-transformer
+            config:
+              replace:
+                uri: "/status"
+
+  # --- Servicio ms-notifications ---
+  - name: service-notifications
+    url: http://host.docker.internal:3001
+    protocol: http
+    connect_timeout: 5000
+    read_timeout: 30000
+    write_timeout: 30000
+    retries: 3
+
+    routes:
+      - name: notifications-health
+        paths:
+          - /api/v1/health
+        strip_path: false
+        methods:
+          - GET
+      - name: notifications-websocket
+        paths:
+          - /ws-notifications
+        strip_path: true
+        protocols:
+          - http
+          - https
 
 # ------------------------------------------------------------------------------
 # PLUGINS GLOBALES: Solo configuración básica de CORS

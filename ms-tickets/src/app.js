@@ -1,11 +1,17 @@
 const express = require('express');
 const config = require('./config');
+const consumerService = require('./api/services/consumer.service');
 
 const app = express();
 
 // Aplicar configuraciones
 config.express(app);
 config.cors(app);
+
+// Inicializar consumer de eventos
+consumerService.start().catch(err => {
+    console.error('Error al inicializar consumer:', err);
+});
 
 // Rutas principales
 app.get('/status', (req, res) => {

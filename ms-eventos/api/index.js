@@ -4,7 +4,9 @@ const routerApi = require('./routes');
 const { logErrors,
   errorHandler,
   sequelizeHandler,
-  boomErrorHandler } = require('./middlewares/error.handler')
+  boomErrorHandler } = require('./middlewares/error.handler');
+const publisherService = require('./services/publisher.service');
+const websocketService = require('./services/websocket.service');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -23,6 +25,11 @@ pueda hacer peticiones a nuestra API*/
 //   }
 // }
 app.use(cors());
+
+// Inicializar publisher de eventos
+publisherService.start().catch(err => {
+    console.error('Error al inicializar publisher de eventos:', err);
+});
 
 require ('./utils/auth');
 
@@ -45,7 +52,10 @@ app.get('/status', (req, res) => {
     });
 });
 
-app.listen(port, () => {
+const server = app.listen(port, () => {
   console.log(`Server is running on port http://localhost:${port}/`);
 });
+
+// Inicializar WebSocket Server
+websocketService.initialize(server);
 
