@@ -4,7 +4,8 @@
       "Bash(npx create-next-app:*)",
       "Bash(npm install:*)",
       "Bash(npx:*)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(docker exec:*)"
     ],
     "deny": []
   }

@@ -1,81 +1,17 @@
 _format_version: "3.0"
-_comment: "Configuración de Kong como API Gateway y balanceador de carga con formato /api/v1/ticketslave/"
+_comment: "Kong Gateway configuration for Docker Production Environment"
 
 # ------------------------------------------------------------------------------
-# SERVICIOS: Define los microservicios backend
+# SERVICIOS: Define los microservicios backend usando IPs internas de Docker
 # ------------------------------------------------------------------------------
 services:
-  # --- Servicio ms-tickets ---
-  - name: service-tickets
-    url: http://host.docker.internal:3010
-    #url: http://172.21.101.101:3000
-    protocol: http
-    connect_timeout: 5000
-    read_timeout: 120000
-    write_timeout: 120000
-    retries: 3
-
-    routes:
-      - name: tickets-cart
-        paths:
-          - /api/v1/cart
-        strip_path: false
-        methods:
-          - GET
-          - POST
-          - PUT
-          - DELETE
-          - PATCH
-          - OPTIONS
-      - name: tickets-orders
-        paths:
-          - /api/v1/orders
-        strip_path: false
-        methods:
-          - GET
-          - POST
-          - PUT
-          - DELETE
-          - PATCH
-          - OPTIONS
-      - name: tickets-tickets
-        paths:
-          - /api/v1/tickets
-        strip_path: false
-        methods:
-          - GET
-          - POST
-          - PUT
-          - DELETE
-          - PATCH
-          - OPTIONS
-      - name: tickets-ticket-types
-        paths:
-          - ~/api/v1/events/\d+/ticket-types
-        strip_path: false
-        methods:
-          - GET
-          - POST
-          - PUT
-          - DELETE
-          - PATCH
-          - OPTIONS
-      - name: tickets-websocket
-        paths:
-          - /ws-tickets
-        strip_path: true
-        protocols:
-          - http
-          - https
-
   # --- Servicio ms-usuarios ---
-  - name: service-users
-    url: http://host.docker.internal:3010
-    #url: http://172.21.101.101:3010
+  - name: service-usuarios
+    url: http://ms-usuarios:3010
     protocol: http
     connect_timeout: 5000
-    read_timeout: 30000
-    write_timeout: 30000
+    read_timeout: 60000
+    write_timeout: 60000
     retries: 3
 
     routes:
@@ -125,13 +61,12 @@ services:
           - OPTIONS
 
   # --- Servicio ms-eventos ---
-  - name: service-events
-    url: http://host.docker.internal:3010
-    #url: http://172.21.101.101:3005
+  - name: service-eventos
+    url: http://ms-eventos:3005
     protocol: http
     connect_timeout: 5000
-    read_timeout: 30000
-    write_timeout: 30000
+    read_timeout: 60000
+    write_timeout: 60000
     retries: 3
 
     routes:
@@ -168,59 +103,150 @@ services:
           - DELETE
           - PATCH
           - OPTIONS
-      - name: eventos-websocket
-        paths:
-          - /ws-eventos
-        strip_path: true
-        protocols:
-          - http
-          - https
       - name: eventos-status
         paths:
           - /eventos/status
-        strip_path: false
+        strip_path: true
         methods:
           - GET
-        plugins:
-          - name: request-transformer
-            config:
-              replace:
-                uri: "/status"
 
-  # --- Servicio ms-notifications ---
-  - name: service-notifications
-    url: http://host.docker.internal:3010
-    #url: http://172.21.101.101:3001
+  # --- Servicio ms-tickets ---
+  - name: service-tickets
+    url: http://ms-tickets:3000
     protocol: http
     connect_timeout: 5000
-    read_timeout: 30000
-    write_timeout: 30000
+    read_timeout: 120000
+    write_timeout: 120000
     retries: 3
 
     routes:
-      - name: notifications-health
+      - name: tickets-cart
         paths:
-          - /api/v1/health
+          - /api/v1/cart
         strip_path: false
         methods:
           - GET
-      - name: notifications-websocket
+          - POST
+          - PUT
+          - DELETE
+          - PATCH
+          - OPTIONS
+      - name: tickets-orders
+        paths:
+          - /api/v1/orders
+        strip_path: false
+        methods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - PATCH
+          - OPTIONS
+      - name: tickets-tickets
+        paths:
+          - /api/v1/tickets
+        strip_path: false
+        methods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - PATCH
+          - OPTIONS
+      - name: tickets-event-ticket-types
+        paths:
+          - /api/v1/events/.*/ticket-types
+        strip_path: false
+        regex_priority: 1
+        methods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - PATCH
+          - OPTIONS
+      - name: tickets-status
+        paths:
+          - /tickets/status
+        strip_path: true
+        methods:
+          - GET
+
+  # --- Servicio ms-notifications ---
+  - name: service-notifications
+    url: http://ms-notifications:3001
+    protocol: http
+    connect_timeout: 5000
+    read_timeout: 60000
+    write_timeout: 60000
+    retries: 3
+
+    routes:
+      - name: notifications-status
+        paths:
+          - /api/v1/health
+        strip_path: true
+        methods:
+          - GET
+
+# ------------------------------------------------------------------------------
+# WEBSOCKET ROUTES
+# ------------------------------------------------------------------------------
+  # WebSocket para ms-tickets
+  - name: websocket-tickets
+    url: http://ms-tickets:3000
+    protocol: http
+
+    routes:
+      - name: ws-tickets
+        paths:
+          - /ws-tickets
+        strip_path: true
+        preserve_host: false
+        protocols:
+          - http
+          - https
+
+  # WebSocket para ms-eventos
+  - name: websocket-eventos
+    url: http://ms-eventos:3005
+    protocol: http
+
+    routes:
+      - name: ws-eventos
+        paths:
+          - /ws-eventos
+        strip_path: true
+        preserve_host: false
+        protocols:
+          - http
+          - https
+
+  # WebSocket para ms-notifications
+  - name: websocket-notifications
+    url: http://ms-notifications:3001
+    protocol: http
+
+    routes:
+      - name: ws-notifications
         paths:
           - /ws-notifications
         strip_path: true
+        preserve_host: false
         protocols:
           - http
           - https
 
 # ------------------------------------------------------------------------------
-# PLUGINS GLOBALES: Solo configuración básica de CORS
+# PLUGINS GLOBALES
 # ------------------------------------------------------------------------------
 plugins:
-  # --- CORS básico ---
   - name: cors
     config:
       origins:
-        - "*"
+        - "http://localhost:709"
+        - "http://127.0.0.1:709"
+        - "http://frontend:3000"
       methods:
         - GET
         - POST
@@ -232,9 +258,12 @@ plugins:
         - Accept
         - Accept-Version
         - Content-Length
+        - Content-MD5
         - Content-Type
         - Date
         - Authorization
-        - X-Requested-With
+      exposed_headers:
+        - X-Auth-Token
       credentials: true
       max_age: 3600
+      preflight_continue: false
