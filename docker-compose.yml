@@ -1,49 +1,52 @@
 version: '3.8'
 
 services:
-  # Nodo 1 del clúster - Zona geográfica 1 (Nodo líder)
+  # Nodo 1 - Líder
   cockroach1:
     image: cockroachdb/cockroach:latest
     container_name: crdb-node1
-    hostname: crdb-node1  # Importante para el DNS interno
+    hostname: crdb-node1
     networks:
-      - roach-net
+      roach-net:
+        ipv4_address: 172.20.0.2  # IP fija para evitar problemas de DNS
     ports:
-      - "26257:26257"  # SQL (externo:26257 → interno:26257)
+      - "26257:26257"  # SQL
       - "8080:8080"    # UI
     volumes:
       - cockroach1:/cockroach/cockroach-data
-    command: start --insecure --store=/cockroach/cockroach-data --listen-addr=0.0.0.0:26257 --http-addr=0.0.0.0:8080 --join=crdb-node1:26257,crdb-node2:26257,crdb-node3:26257 --locality=region=geo-zone-1,dc=dc-a
+    command: start --insecure --store=/cockroach/cockroach-data --listen-addr=0.0.0.0:26257 --http-addr=0.0.0.0:8080 --advertise-addr=crdb-node1:26257 --join=crdb-node1:26257,crdb-node2:26257,crdb-node3:26257
 
-  # Nodo 2 del clúster - Zona geográfica 1 (Réplica local)
+  # Nodo 2 - Réplica
   cockroach2:
     image: cockroachdb/cockroach:latest
     container_name: crdb-node2
     hostname: crdb-node2
     networks:
-      - roach-net
+      roach-net:
+        ipv4_address: 172.20.0.3
     ports:
-      - "26258:26257"  # SQL (externo:26258 → interno:26257)
+      - "26258:26257"  # SQL
       - "8081:8080"    # UI
     volumes:
       - cockroach2:/cockroach/cockroach-data
-    command: start --insecure --store=/cockroach/cockroach-data --listen-addr=0.0.0.0:26257 --http-addr=0.0.0.0:8080 --join=crdb-node1:26257,crdb-node2:26257,crdb-node3:26257 --locality=region=geo-zone-1,dc=dc-b
+    command: start --insecure --store=/cockroach/cockroach-data --listen-addr=0.0.0.0:26257 --http-addr=0.0.0.0:8080 --advertise-addr=crdb-node2:26257 --join=crdb-node1:26257,crdb-node2:26257,crdb-node3:26257
 
-  # Nodo 3 del clúster - Zona geográfica 2 (Réplica remota)
+  # Nodo 3 - Réplica
   cockroach3:
     image: cockroachdb/cockroach:latest
     container_name: crdb-node3
     hostname: crdb-node3
     networks:
-      - roach-net
+      roach-net:
+        ipv4_address: 172.20.0.4
     ports:
-      - "26259:26257"  # SQL (externo:26259 → interno:26257)
+      - "26259:26257"  # SQL
       - "8082:8080"    # UI
     volumes:
       - cockroach3:/cockroach/cockroach-data
-    command: start --insecure --store=/cockroach/cockroach-data --listen-addr=0.0.0.0:26257 --http-addr=0.0.0.0:8080 --join=crdb-node1:26257,crdb-node2:26257,crdb-node3:26257 --locality=region=geo-zone-2,dc=dc-c
+    command: start --insecure --store=/cockroach/cockroach-data --listen-addr=0.0.0.0:26257 --http-addr=0.0.0.0:8080 --advertise-addr=crdb-node3:26257 --join=crdb-node1:26257,crdb-node2:26257,crdb-node3:26257
 
-  # Contenedor para inicializar el clúster. Se ejecuta una sola vez.
+  # Inicializador del clúster (se ejecuta una vez)
   roach-init:
     image: cockroachdb/cockroach:latest
     container_name: roach-init
@@ -54,32 +57,53 @@ services:
       - cockroach2
       - cockroach3
     command: init --insecure --host=crdb-node1:26257
-  
+
+  # Creador de bases de datos
+  database-setup:
+    image: cockroachdb/cockroach:latest
+    container_name: database-setup
+    networks:
+      - roach-net
+    depends_on:
+      - roach-init
+    command: >
+      bash -c "
+      sleep 10 &&
+      cockroach sql --insecure --host=crdb-node1:26257 --execute='CREATE DATABASE IF NOT EXISTS ms_eventos;' &&
+      cockroach sql --insecure --host=crdb-node1:26257 --execute='CREATE DATABASE IF NOT EXISTS ms_usuarios;' &&
+      cockroach sql --insecure --host=crdb-node1:26257 --execute='CREATE DATABASE IF NOT EXISTS ms_tickets;' &&
+      cockroach sql --insecure --host=crdb-node1:26257 --execute='CREATE DATABASE IF NOT EXISTS ms_notifications;' &&
+      echo 'Bases de datos creadas exitosamente'
+      "
+    restart: "no"
+
+  # RabbitMQ
   rabbitmq:
-    image: rabbitmq:3.12-management  # Versión con interfaz web
+    image: rabbitmq:3.12-management
     container_name: rabbitmq
     hostname: rabbitmq
-    restart: unless-stopped
     ports:
-      - "5672:5672"   # Puerto AMQP (para clientes)
-      - "15672:15672" # Puerto de la interfaz de gestión
+      - "5672:5672"   # AMQP
+      - "15672:15672" # Management UI
     environment:
-      - RABBITMQ_DEFAULT_USER=admin      # Usuario predeterminado
-      - RABBITMQ_DEFAULT_PASS=password   # Contraseña del usuario
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: password
     volumes:
-      - rabbitmq_data:/var/lib/rabbitmq  # Volumen para persistencia
+      - rabbitmq_data:/var/lib/rabbitmq
     networks:
-      - rabbitmq_net
+      - roach-net
 
-# Red para que los nodos se comuniquen entre sí
+# Red personalizada con subnet fija
 networks:
   roach-net:
     driver: bridge
-  rabbitmq_net:
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
 
-# Volúmenes para persistir los datos de cada nodo
+# Volúmenes para persistencia
 volumes:
-  rabbitmq_data:
   cockroach1:
   cockroach2:
   cockroach3:
+  rabbitmq_data:

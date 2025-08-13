@@ -4,7 +4,7 @@ const { body } = require('express-validator');
 const addItemToCartDTO = [
     body('ticketTypeId')
         .notEmpty().withMessage('El ticketTypeId es requerido.')
-        .isInt({ min: 1 }).withMessage('El ticketTypeId debe ser un número entero positivo.'),
+        .isString().withMessage('El ticketTypeId debe ser una cadena de texto.'),
 
     body('cantidad')
         .notEmpty().withMessage('La cantidad es requerida.')

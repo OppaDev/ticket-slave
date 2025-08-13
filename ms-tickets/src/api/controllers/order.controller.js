@@ -4,8 +4,9 @@ const orderService = require('../services/order.service');
 class OrderController {
     async create(req, res, next) {
         try {
-            const userId = req.user.id;
-            const orderDetails = await orderService.createOrderFromCart(userId, req.body);
+            const userId = req.user.sub; // Usar 'sub' del JWT decodificado
+            const userEmail = req.user.email; // Obtener email del JWT
+            const orderDetails = await orderService.createOrderFromCart(userId, req.body, userEmail);
             res.status(201).json(orderDetails);
         } catch (error) {
             next(error);
@@ -14,7 +15,7 @@ class OrderController {
 
     async getAll(req, res, next) {
         try {
-            const userId = req.user.id;
+            const userId = req.user.sub; // Usar 'sub' del JWT decodificado
             const { page, limit } = req.query;
             const orders = await orderService.findUserOrders(userId, { page, limit });
             res.status(200).json(orders);
@@ -25,7 +26,7 @@ class OrderController {
 
     async getOne(req, res, next) {
         try {
-            const userId = req.user.id;
+            const userId = req.user.sub; // Usar 'sub' del JWT decodificado
             const { id } = req.params;
             const order = await orderService.findOrderById(userId, id);
             res.status(200).json(order);
@@ -36,7 +37,7 @@ class OrderController {
 
     async requestRefund(req, res, next) {
         try {
-            const userId = req.user.id;
+            const userId = req.user.sub; // Usar 'sub' del JWT decodificado
             const { id } = req.params;
             const refundResult = await orderService.requestRefund(userId, id, req.body);
             res.status(202).json(refundResult);

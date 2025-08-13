@@ -29,11 +29,13 @@ Ticket.init({
         unique: true,
         field: 'ticket_code',
     },
-    // orderId, ticketTypeId y userId se definen por asociación
     status: {
-        type: DataTypes.ENUM('VALID', 'USED', 'CANCELLED'),
+        type: DataTypes.STRING,
         allowNull: false,
         defaultValue: 'VALID',
+        validate: {
+            isIn: [['VALID', 'USED', 'CANCELLED']],
+        },
     },
     eventId: {
         type: DataTypes.INTEGER,

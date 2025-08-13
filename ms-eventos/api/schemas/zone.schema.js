@@ -1,8 +1,8 @@
 // api/schemas/zone.schema.js
 const Joi = require('joi');
 
-const id = Joi.number().integer();
-const venueId = Joi.number().integer();
+const id = Joi.string();
+const venueId = Joi.string();
 const nombre = Joi.string().min(3).max(50);
 const capacidad = Joi.number().integer().min(1);
 

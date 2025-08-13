@@ -1,14 +1,15 @@
 // api/schemas/event.schema.js
 const Joi = require('joi');
 
-const id = Joi.number().integer();
+//ejemplo de id 1087853036169953281
+const id = Joi.string();
 const nombre = Joi.string().min(5);
 const descripcion = Joi.string().min(20);
 const fechaInicio = Joi.date();
 const fechaFin = Joi.date().greater(Joi.ref('fechaInicio'));
 const imagenUrl = Joi.string().uri();
-const categoryId = Joi.number().integer();
-const venueId = Joi.number().integer();
+const categoryId = Joi.string();
+const venueId = Joi.string();
 
 // Para paginación y filtros
 const limit = Joi.number().integer();

@@ -3,6 +3,9 @@ const { sequelize, Cart, CartItem, Order, OrderItem, TicketType } = require('../
 const { NotFoundError, ConflictError, BadRequestError } = require('../../utils/errors');
 const cartService = require('./cart.service'); // Reutilizamos el servicio de carrito
 const ticketService = require('./ticket.service');
+const publisherService = require('./publisher.service');
+const websocketService = require('./websocket.service');
+const ticketTypeService = require('./ticketType.service');
 
 // Simulación de un servicio de pasarela de pago
 const paymentGatewayService = {
@@ -18,7 +21,7 @@ const paymentGatewayService = {
 
 class OrderService {
 
-    async createOrderFromCart(userId, paymentDetails) {
+    async createOrderFromCart(userId, paymentDetails, userEmail) {
         const transaction = await sequelize.transaction();
         try {
             // 1. Obtener el carrito del usuario y validar que no esté vacío o expirado
@@ -43,15 +46,35 @@ class OrderService {
             }
             totalAmount = parseFloat(totalAmount.toFixed(2));
 
-            // 3. Procesar el pago
+            // 3. Notificar inicio de procesamiento de pago
+            websocketService.notifyPaymentStatus(userId, {
+                status: 'processing',
+                amount: totalAmount,
+                message: 'Procesando pago...'
+            });
+
+            // 4. Procesar el pago
             const paymentResult = await paymentGatewayService.processPayment(
                 paymentDetails.paymentMethodId,
                 totalAmount
             );
 
             if (!paymentResult.success) {
+                // Notificar fallo de pago
+                websocketService.notifyPaymentStatus(userId, {
+                    status: 'failed',
+                    amount: totalAmount,
+                    message: `Error de pago: ${paymentResult.message}`
+                });
                 throw new BadRequestError(`Error de pago: ${paymentResult.message}`); // En API real sería 402 Payment Required
             }
+
+            // Notificar éxito de pago
+            websocketService.notifyPaymentStatus(userId, {
+                status: 'success',
+                amount: totalAmount,
+                message: 'Pago procesado exitosamente'
+            });
 
             // 4. Crear el pedido
             const order = await Order.create({
@@ -81,18 +104,28 @@ class OrderService {
 
                 // *** NUEVO: Generar las entradas para este OrderItem ***
                 await ticketService.generateTicketsForOrderItem(orderItem, transaction);
+
+                // *** WebSocket: Notificar cambio de stock ***
+                const updatedTicketType = await TicketType.findByPk(item.ticketTypeId);
+                ticketTypeService.notifyStockChange(updatedTicketType);
             }
 
             // 6. Vaciar el carrito
             await CartItem.destroy({ where: { cartId: cart.id }, transaction });
 
-            // Si todo fue exitoso, confirmar la transacción
+            // Si todo fue exitoso hasta aquí, confirmar la transacción
             await transaction.commit();
 
-            // En un sistema real, aquí se emitiría un evento para el microservicio de tickets/notificaciones
-            // para generar los tickets QR y enviarlos al usuario.
+            // *** WebSocket: Notificar tickets generados ***
+            const totalTickets = cart.items.reduce((sum, item) => sum + item.quantity, 0);
+            websocketService.notifyTicketsGenerated(userId, {
+                orderId: order.id,
+                ticketsCount: totalTickets,
+                downloadUrl: `/api/v1/orders/${order.id}/tickets`
+            });
 
-            return {
+            // Preparar datos para retornar
+            const orderResponse = {
                 id: order.id,
                 codigoPedido: order.orderCode,
                 estado: order.status,
@@ -100,8 +133,34 @@ class OrderService {
                 mensaje: '¡Gracias por tu compra! Tus entradas han sido generadas.'
             };
 
+            // Intentar enviar evento de notificación (no crítico, la orden ya fue creada)
+            try {
+                // En un sistema real, aquí se emitiría un evento para el microservicio de tickets/notificaciones
+                // para generar los tickets QR y enviarlos al usuario.
+                const eventPayload = {
+                    userEmail: userEmail, // Ahora incluimos el email del usuario
+                    userName: paymentDetails.billingAddress.nombreCompleto,
+                    orderDetails: {
+                        id: order.id,
+                        codigoPedido: order.orderCode,
+                        totalAmount: parseFloat(order.totalAmount),
+                        currency: order.currency
+                    }
+                };
+                await publisherService.publishMessage('purchase.completed', eventPayload);
+            } catch (notificationError) {
+                // Log del error pero no fallar la operación ya que la orden se creó exitosamente
+                console.error('Error enviando notificación de compra completada:', notificationError);
+                // Opcionalmente, podrías agregar aquí lógica para reintento posterior
+            }
+
+            return orderResponse;
+
         } catch (error) {
-            await transaction.rollback();
+            // Solo hacer rollback si la transacción no ha sido committeada
+            if (!transaction.finished) {
+                await transaction.rollback();
+            }
             throw error;
         }
     }

@@ -4,7 +4,7 @@ const cartService = require('../services/cart.service');
 class CartController {
     async get(req, res, next) {
         try {
-            const userId = req.user.id;
+            const userId = req.user.sub; // Usar 'sub' del JWT decodificado
             const cart = await cartService.getCart(userId);
             res.status(200).json(cart);
         } catch (error) {
@@ -14,7 +14,7 @@ class CartController {
 
     async addItem(req, res, next) {
         try {
-            const userId = req.user.id;
+            const userId = req.user.sub; // Usar 'sub' del JWT decodificado
             const { ticketTypeId, cantidad } = req.body;
             
             // Mapeo del DTO: cantidad (español) -> quantity (inglés)
@@ -32,7 +32,7 @@ class CartController {
 
     async removeItem(req, res, next) {
         try {
-            const userId = req.user.id;
+            const userId = req.user.sub; // Usar 'sub' del JWT decodificado
             const { itemId } = req.params;
             await cartService.removeItem(userId, parseInt(itemId));
             res.status(204).send();
@@ -43,7 +43,7 @@ class CartController {
 
     async clear(req, res, next) {
         try {
-            const userId = req.user.id;
+            const userId = req.user.sub; // Usar 'sub' del JWT decodificado
             await cartService.clearCart(userId);
             res.status(204).send();
         } catch (error) {

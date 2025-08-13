@@ -5,7 +5,7 @@ const eventsRouter = require('./events.router.js'); // <-- AÑADIR
 
 function routerApi(app) {
   const router = express.Router();
-  app.use('', router);
+  app.use('/api/v1', router);
 
   router.use('/categories', categoriesRouter);
   router.use('/venues', venuesRouter);

@@ -1,21 +1,26 @@
 // src/api/middleware/auth.middleware.js
 
+const jwt = require('jsonwebtoken');
+const { jwtSecret } = require('../../config/config');
+
 /**
- * Middleware de autenticación simulado.
- * En una aplicación real, este middleware validaría un token JWT,
- * buscaría el usuario en la base de datos y lo adjuntaría al objeto `req`.
+ * Middleware de autenticación.
+ * Valida un token JWT,
+ * y adjunta el payload al objeto `req.user`.
  */
 const authenticate = (req, res, next) => {
-    // Extrae el userId de la cabecera enviada por Kong
-    const userId = req.header('X-User-Id');
-    if (!userId) {
-        return res.status(401).json({ message: 'No autorizado: userId no presente' });
+    const authHeader = req.headers['authorization'];
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ message: 'No autorizado: token no presente' });
     }
-    req.user = {
-        id: parseInt(userId, 10),
-        // ... otros datos del usuario si se agregan más claims
-    };
-    next();
+    const token = authHeader.split(' ')[1];
+    try {
+        const payload = jwt.verify(token, jwtSecret);
+        req.user = payload; // El payload debe contener el id y otros claims
+        next();
+    } catch (err) {
+        return res.status(401).json({ message: 'Token inválido o expirado' });
+    }
 };
 
 module.exports = {

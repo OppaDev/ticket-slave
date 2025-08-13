@@ -30,6 +30,14 @@ app.get('/api', (req, res) => {
   res.send('Express Server');
 })
 
+app.get('/status', (req, res) => {
+    res.json({
+        message: 'Microservicio funcionando correctamente USUARIOS',
+        timestamp: new Date().toISOString(),
+        version: '1.0.0'
+    });
+});
+
 routerApi(app);
 
 app.use(logErrors);

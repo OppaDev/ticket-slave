@@ -1,9 +1,9 @@
 const Joi = require('joi');
 
-const id = Joi.number().integer();
+const id = Joi.string();
 const nombre = Joi.string().min(3).max(20).required();
 const descripcion = Joi.string().max(255);
-const permissions = Joi.array().items(Joi.number().integer());
+const permissions = Joi.array().items(Joi.string());
 
 const createRoleSchema = Joi.object({
   nombre: nombre.required(),

@@ -1,5 +1,6 @@
 const express = require('express');
 const config = require('./config');
+const consumerService = require('./api/services/consumer.service');
 
 const app = express();
 
@@ -7,10 +8,15 @@ const app = express();
 config.express(app);
 config.cors(app);
 
+// Inicializar consumer de eventos
+consumerService.start().catch(err => {
+    console.error('Error al inicializar consumer:', err);
+});
+
 // Rutas principales
-app.get('/api/v1', (req, res) => {
+app.get('/status', (req, res) => {
     res.json({
-        message: 'Microservicio funcionando correctamente',
+        message: 'Microservicio funcionando correctamente TICKETS',
         timestamp: new Date().toISOString(),
         version: '1.0.0'
     });

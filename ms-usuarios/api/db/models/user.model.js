@@ -45,7 +45,7 @@ const UserSchema = {
     type: DataTypes.STRING,
   },
   roleId: {
-    allowNull: false,
+    allowNull: true,
     type: DataTypes.INTEGER,
     field: 'role_id',
     references: {

@@ -1,6 +1,7 @@
 // src/api/services/ticketType.service.js
 const { TicketType } = require('../models');
 const { NotFoundError, ConflictError } = require('../../utils/errors');
+const websocketService = require('./websocket.service');
 
 class TicketTypeService {
     // Mapear campos de la API a la base de datos
@@ -82,6 +83,44 @@ class TicketTypeService {
         }
 
         await ticketType.destroy();
+    }
+
+    // Método auxiliar para notificar cambios de stock vía WebSocket
+    notifyStockChange(ticketType) {
+        const stockData = {
+            available: ticketType.quantity - ticketType.sold,
+            total: ticketType.quantity,
+            sold: ticketType.sold
+        };
+
+        // Notificar cambio de stock
+        websocketService.notifyStockUpdate(
+            ticketType.eventId,
+            ticketType.id,
+            stockData
+        );
+
+        // Alertar si stock está bajo (menos de 10)
+        if (stockData.available <= 10 && stockData.available > 0) {
+            websocketService.notifyLowStock(
+                ticketType.eventId,
+                ticketType.id,
+                { ...stockData, threshold: 10 }
+            );
+        }
+    }
+
+    // Método para obtener stock en tiempo real
+    async getStockStatus(eventId, typeId) {
+        const ticketType = await this.findById(eventId, typeId);
+        return {
+            ticketTypeId: ticketType.id,
+            eventId: ticketType.eventId,
+            available: ticketType.quantity - ticketType.sold,
+            total: ticketType.quantity,
+            sold: ticketType.sold,
+            percentage: ((ticketType.sold / ticketType.quantity) * 100).toFixed(1)
+        };
     }
 }
 
