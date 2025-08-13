@@ -17,7 +17,11 @@ class PermissionService {
   }
 
   async findOne(id) {
-    const permission = await this.model.findByPk(id);
+    const permission = await this.model.findByPk(id,
+      {
+        include: ['roles']
+      }
+    );
     if (!permission) {
       throw boom.notFound('Permission not found');
     }

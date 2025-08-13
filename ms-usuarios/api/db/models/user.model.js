@@ -30,7 +30,7 @@ const UserSchema = {
   status: {
     allowNull: false,
     type: DataTypes.STRING,
-    defaultValue: 'active',
+    defaultValue: 'activo',
   },
   fechaNacimiento: {
     allowNull: true,
