@@ -155,10 +155,6 @@ export default function LoginPage() {
           </form>
         </Card>
 
-        {/* Development Panel */}
-        <div className="flex-1 max-w-md">
-          <DevLoginPanel />
-        </div>
       </div>
     </div>
   )
