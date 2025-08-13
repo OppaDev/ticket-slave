@@ -42,7 +42,15 @@ class UserService {
   }
 
   async findOne(id) {
-    const user = await this.model.findByPk(id);
+    const user = await this.model.findByPk(id, {
+      include: [
+        {
+          model: this.roleModel,
+          as: 'role',
+          include: ['permissions']
+        }
+      ]
+    });
     if (!user) {
       throw boom.notFound('User not found');
     } else {

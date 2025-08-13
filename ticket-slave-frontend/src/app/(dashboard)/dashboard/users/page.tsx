@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { ProtectedRoute } from '@/components/auth/protected-route'
 import { usersAPI } from '@/lib/api'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -9,11 +9,20 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { 
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { 
   Search, 
   Plus, 
   Filter,
   MoreHorizontal,
   Edit,
+  Eye,
   Trash2,
   UserCheck,
   UserX,
@@ -39,9 +48,16 @@ const roleColors = {
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([])
+  const [usersWithRoles, setUsersWithRoles] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadingRoles, setLoadingRoles] = useState(false)
+  
+  // Delete modal state
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [userToDelete, setUserToDelete] = useState<User | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
-  // Fetch users
+  // Fetch users (without role details according to HAR)
   const fetchUsers = async () => {
     try {
       setLoading(true)
@@ -51,6 +67,8 @@ export default function UsersPage() {
       // La API devuelve un array directo, no paginado según el HAR
       if (Array.isArray(data)) {
         setUsers(data)
+        // GET /users no incluye información de rol según HAR actualizado
+        setUsersWithRoles(data) // Inicialmente sin roles
       }
     } catch (error) {
       console.error('Error fetching users:', error)
@@ -60,42 +78,58 @@ export default function UsersPage() {
     }
   }
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true)
-        const response = await usersAPI.getUsers()
-        const data = response.data
-        
-        // La API devuelve un array directo, no paginado según el HAR
-        if (Array.isArray(data)) {
-          setUsers(data)
-        }
-      } catch (error) {
-        console.error('Error fetching users:', error)
-        toast.error('Error al cargar usuarios')
-      } finally {
-        setLoading(false)
-      }
+  // Fetch detailed user info with role for filtering/display
+  const fetchUsersWithRoles = useCallback(async () => {
+    if (users.length === 0) return
+    
+    try {
+      setLoadingRoles(true)
+      // Obtener información detallada de cada usuario (incluye rol según HAR)
+      const detailedUsers = await Promise.all(
+        users.map(async (user) => {
+          try {
+            const response = await usersAPI.getUser(user.id) // Usar getUser en lugar de getUserById
+            return response.data
+          } catch (error) {
+            console.error(`Error fetching user ${user.id}:`, error)
+            return user // Fallback al usuario sin rol
+          }
+        })
+      )
+      setUsersWithRoles(detailedUsers)
+    } catch (error) {
+      console.error('Error fetching user details:', error)
+      toast.error('Error al cargar detalles de usuarios')
+    } finally {
+      setLoadingRoles(false)
     }
+  }, [users])
 
-    fetchData()
+  useEffect(() => {
+    fetchUsers()
   }, [])
+
+  // Fetch detailed info when users are loaded
+  useEffect(() => {
+    if (users.length > 0) {
+      fetchUsersWithRoles()
+    }
+  }, [users, fetchUsersWithRoles])
 
   // Handle search (client-side filtering since API doesn't support query params)
   const [searchTerm, setSearchTerm] = useState('')
   const [roleFilter, setRoleFilter] = useState<string>('')
   const [statusFilter, setStatusFilter] = useState<string>('')
 
-  // Filter users client-side
-  const filteredUsers = users.filter(user => {
+  // Filter users client-side - usar usersWithRoles para tener información de rol
+  const filteredUsers = usersWithRoles.filter(user => {
     const matchesSearch = !searchTerm || 
       user.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.apellido.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase())
     
-    const matchesRole = !roleFilter || user.role?.nombre === roleFilter
-    const matchesStatus = !statusFilter || user.status === statusFilter
+    const matchesRole = !roleFilter || roleFilter === 'all' || user.role?.nombre === roleFilter
+    const matchesStatus = !statusFilter || statusFilter === 'all' || user.status === statusFilter
     
     return matchesSearch && matchesRole && matchesStatus
   })
@@ -117,29 +151,54 @@ export default function UsersPage() {
   // Toggle user status
   const toggleUserStatus = async (userId: string, currentStatus: string) => {
     try {
-      const newStatus = currentStatus === 'active' ? 'inactive' : 'active'
+      const newStatus = currentStatus === 'activo' ? 'inactivo' : 'activo'
       await usersAPI.updateUser(userId, { status: newStatus })
-      toast.success(`Usuario ${newStatus === 'active' ? 'activado' : 'desactivado'} exitosamente`)
-      fetchUsers() // Refresh list
+      toast.success(`Usuario ${newStatus === 'activo' ? 'activado' : 'desactivado'} exitosamente`)
+
+      // Actualizar el usuario específico en ambas listas
+      setUsers(prev => prev.map(user => 
+        user.id === userId ? { ...user, status: newStatus } : user
+      ))
+      setUsersWithRoles(prev => prev.map(user => 
+        user.id === userId ? { ...user, status: newStatus } : user
+      ))
     } catch (error) {
       console.error('Error updating user status:', error)
       toast.error('Error al cambiar el estado del usuario')
     }
   }
 
-  // Delete user
-  const deleteUser = async (userId: string) => {
-    if (!confirm('¿Estás seguro de que quieres eliminar este usuario?')) {
-      return
-    }
+  // Open delete confirmation modal
+  const openDeleteModal = (user: User) => {
+    setUserToDelete(user)
+    setShowDeleteModal(true)
+  }
 
+  // Close delete modal
+  const closeDeleteModal = () => {
+    setShowDeleteModal(false)
+    setUserToDelete(null)
+    setDeleting(false)
+  }
+
+  // Delete user
+  const deleteUser = async () => {
+    if (!userToDelete) return
+    
     try {
-      await usersAPI.deleteUser(userId)
+      setDeleting(true)
+      await usersAPI.deleteUser(userToDelete.id)
       toast.success('Usuario eliminado exitosamente')
-      fetchUsers() // Refresh list
+      
+      // Remover de ambas listas
+      setUsers(prev => prev.filter(user => user.id !== userToDelete.id))
+      setUsersWithRoles(prev => prev.filter(user => user.id !== userToDelete.id))
+      
+      closeDeleteModal()
     } catch (error) {
       console.error('Error deleting user:', error)
       toast.error('Error al eliminar usuario')
+      setDeleting(false)
     }
   }
 
@@ -202,7 +261,7 @@ export default function UsersPage() {
                   <SelectValue placeholder="Filtrar por rol" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos los roles</SelectItem>
+                  <SelectItem value="all">Todos los roles</SelectItem>
                   <SelectItem value="admin">Administrador</SelectItem>
                   <SelectItem value="organizer">Organizador</SelectItem>
                   <SelectItem value="customer">Cliente</SelectItem>
@@ -215,9 +274,9 @@ export default function UsersPage() {
                   <SelectValue placeholder="Filtrar por estado" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos los estados</SelectItem>
-                  <SelectItem value="active">Activo</SelectItem>
-                  <SelectItem value="inactive">Inactivo</SelectItem>
+                  <SelectItem value="all">Todos los estados</SelectItem>
+                  <SelectItem value="activo">Activo</SelectItem>
+                  <SelectItem value="inactivo">Inactivo</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -226,8 +285,8 @@ export default function UsersPage() {
                 variant="outline" 
                 onClick={() => {
                   setSearchTerm('')
-                  setRoleFilter('')
-                  setStatusFilter('')
+                  setRoleFilter('all')
+                  setStatusFilter('all')
                 }}
               >
                 <Filter className="h-4 w-4 mr-2" />
@@ -242,6 +301,11 @@ export default function UsersPage() {
           <CardHeader>
             <CardTitle>
               Usuarios ({filteredUsers.length})
+              {loadingRoles && (
+                <span className="ml-2 text-sm text-gray-500">
+                  - Cargando roles...
+                </span>
+              )}
             </CardTitle>
             <CardDescription>
               Lista de todos los usuarios registrados en el sistema
@@ -252,7 +316,7 @@ export default function UsersPage() {
               <div className="flex items-center justify-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
               </div>
-            ) : users.length === 0 ? (
+            ) : usersWithRoles.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 No se encontraron usuarios con los filtros aplicados
               </div>
@@ -308,10 +372,10 @@ export default function UsersPage() {
                             </td>
                             <td className="py-3 px-2">
                               <Badge 
-                                variant={user.status === 'active' ? 'default' : 'secondary'}
-                                className={user.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}
+                                variant={user.status === 'activo' ? 'default' : 'secondary'}
+                                className={user.status === 'activo' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}
                               >
-                                {user.status === 'active' ? 'Activo' : 'Inactivo'}
+                                {user.status === 'activo' ? 'Activo' : 'Inactivo'}
                               </Badge>
                             </td>
                             <td className="py-3 px-2 text-sm text-gray-600">
@@ -322,7 +386,16 @@ export default function UsersPage() {
                                 <Button
                                   size="sm"
                                   variant="ghost"
+                                  onClick={() => window.location.href = `/dashboard/users/${user.id}`}
+                                  title="Ver detalles"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
                                   onClick={() => window.location.href = `/dashboard/users/${user.id}/edit`}
+                                  title="Editar usuario"
                                 >
                                   <Edit className="h-4 w-4" />
                                 </Button>
@@ -330,9 +403,10 @@ export default function UsersPage() {
                                   size="sm"
                                   variant="ghost"
                                   onClick={() => toggleUserStatus(user.id, user.status)}
-                                  className={user.status === 'active' ? 'text-red-600' : 'text-green-600'}
+                                  className={user.status === 'activo' ? 'text-red-600' : 'text-green-600'}
+                                  title={user.status === 'activo' ? 'Desactivar usuario' : 'Activar usuario'}
                                 >
-                                  {user.status === 'active' ? 
+                                  {user.status === 'activo' ? 
                                     <UserX className="h-4 w-4" /> : 
                                     <UserCheck className="h-4 w-4" />
                                   }
@@ -340,8 +414,9 @@ export default function UsersPage() {
                                 <Button
                                   size="sm"
                                   variant="ghost"
-                                  onClick={() => deleteUser(user.id)}
+                                  onClick={() => openDeleteModal(user)}
                                   className="text-red-600"
+                                  title="Eliminar usuario"
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
@@ -389,23 +464,45 @@ export default function UsersPage() {
                             </Badge>
                           </div>
                           <Badge 
-                            variant={user.status === 'active' ? 'default' : 'secondary'}
-                            className={user.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}
+                            variant={user.status === 'activo' ? 'default' : 'secondary'}
+                            className={user.status === 'activo' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}
                           >
-                            {user.status === 'active' ? 'Activo' : 'Inactivo'}
+                            {user.status === 'activo' ? 'Activo' : 'Inactivo'}
                           </Badge>
                         </div>
 
                         <div className="flex justify-between items-center text-sm text-gray-500">
                           <span>Registro: {formatDate(user.createdAt)}</span>
                           <div className="flex gap-1">
-                            <Button size="sm" variant="outline">Editar</Button>
                             <Button 
                               size="sm" 
                               variant="outline"
-                              className={user.status === 'active' ? 'text-red-600' : 'text-green-600'}
+                              onClick={() => window.location.href = `/dashboard/users/${user.id}`}
                             >
-                              {user.status === 'active' ? 'Desactivar' : 'Activar'}
+                              Ver
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => window.location.href = `/dashboard/users/${user.id}/edit`}
+                            >
+                              Editar
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              className={user.status === 'activo' ? 'text-red-600' : 'text-green-600'}
+                              onClick={() => toggleUserStatus(user.id, user.status)}
+                            >
+                              {user.status === 'activo' ? 'Desactivar' : 'Activar'}
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              className="text-red-600"
+                              onClick={() => openDeleteModal(user)}
+                            >
+                              Eliminar
                             </Button>
                           </div>
                         </div>
@@ -427,6 +524,69 @@ export default function UsersPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Delete Confirmation Modal */}
+        <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Confirmar Eliminación</DialogTitle>
+              <DialogDescription>
+                ¿Estás seguro de que deseas eliminar al usuario{' '}
+                <strong>
+                  {userToDelete?.nombre} {userToDelete?.apellido}
+                </strong>
+                ?
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 my-4">
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  <Trash2 className="h-5 w-5 text-red-600" />
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-red-800">
+                    ⚠️ Esta acción no se puede deshacer
+                  </h3>
+                  <div className="mt-2 text-sm text-red-700">
+                    <ul className="list-disc list-inside space-y-1">
+                      <li>Se eliminará permanentemente el usuario del sistema</li>
+                      <li>Se perderán todos los datos asociados</li>
+                      <li>No podrás recuperar esta información</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={closeDeleteModal}
+                disabled={deleting}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={deleteUser}
+                disabled={deleting}
+              >
+                {deleting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                    Eliminando...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Eliminar Usuario
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </ProtectedRoute>
   )

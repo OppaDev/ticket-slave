@@ -18,11 +18,12 @@ import {
   BarChart3,
   PieChart
 } from 'lucide-react'
-import type { AdminDashboardStats } from '@/types'
+import type { AdminDashboardStats, RecentActivity } from '@/types'
 import { toast } from 'sonner'
 
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState<AdminDashboardStats | null>(null)
+  const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
 
@@ -32,14 +33,20 @@ export default function AdminDashboardPage() {
       if (showRefreshToast) setRefreshing(true)
       else setLoading(true)
 
-      const response = await dashboardAPI.getAdminStats()
-      setStats(response.data)
+      // Obtener estadísticas y actividad reciente en paralelo
+      const [statsResponse, activityResponse] = await Promise.all([
+        dashboardAPI.getAdminStats(),
+        dashboardAPI.getRecentActivity()
+      ])
+      
+      setStats(statsResponse.data)
+      setRecentActivity(activityResponse.data)
       
       if (showRefreshToast) {
         toast.success('Estadísticas actualizadas')
       }
     } catch (error) {
-      console.error('Error fetching admin stats:', error)
+    //   console.error('Error fetching admin stats:', error)
       toast.error('Error al cargar las estadísticas')
     } finally {
       setLoading(false)
@@ -50,6 +57,13 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     fetchStats()
   }, [])
+
+  // Debug: imprimir stats cuando cambien
+  useEffect(() => {
+    if (stats) {
+      console.log('Dashboard stats loaded:', JSON.stringify(stats, null, 2))
+    }
+  }, [stats])
 
   const handleRefresh = () => {
     fetchStats(true)
@@ -109,7 +123,7 @@ export default function AdminDashboardPage() {
     },
     {
       role: 'organizer',
-      label: 'Organizadores',
+      label: 'Organizadores', 
       count: stats?.usersByRole?.organizer || 0,
       color: 'text-blue-600',
       bgColor: 'bg-blue-50',
@@ -285,20 +299,21 @@ export default function AdminDashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {/* Mock recent activities - Esto será reemplazado con datos reales */}
-              {[
-                { user: 'Juan Pérez', action: 'Nuevo registro', time: 'Hace 5 minutos' },
-                { user: 'Admin', action: 'Usuario activado', time: 'Hace 15 minutos' },
-                { user: 'María García', action: 'Perfil actualizado', time: 'Hace 1 hora' },
-              ].map((activity, index) => (
-                <div key={index} className="flex items-center justify-between py-2 border-b last:border-b-0">
-                  <div>
-                    <p className="text-sm font-medium">{activity.user}</p>
-                    <p className="text-xs text-gray-500">{activity.action}</p>
+              {recentActivity.length > 0 ? (
+                recentActivity.slice(0, 5).map((activity, index) => (
+                  <div key={activity.id || index} className="flex items-center justify-between py-2 border-b last:border-b-0">
+                    <div>
+                      <p className="text-sm font-medium">{activity.user}</p>
+                      <p className="text-xs text-gray-500">{activity.action}</p>
+                    </div>
+                    <span className="text-xs text-gray-400">{activity.time}</span>
                   </div>
-                  <span className="text-xs text-gray-400">{activity.time}</span>
+                ))
+              ) : (
+                <div className="text-center py-4 text-gray-500">
+                  <p>No hay actividad reciente disponible</p>
                 </div>
-              ))}
+              )}
             </div>
             <Button variant="outline" className="w-full mt-4">
               Ver Toda la Actividad

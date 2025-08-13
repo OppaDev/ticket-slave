@@ -44,9 +44,15 @@ const navigation: NavItem[] = [
     requiredPermissions: ['users:read'],
   },
   {
-    name: 'Roles y Permisos',
+    name: 'Roles',
     href: '/dashboard/roles',
     icon: Crown,
+    requiredPermissions: ['rbac:manage'],
+  },
+  {
+    name: 'Permisos',
+    href: '/dashboard/permissions',
+    icon: Shield,
     requiredPermissions: ['rbac:manage'],
   },
   {
@@ -70,7 +76,7 @@ const navigation: NavItem[] = [
   {
     name: 'Auditoría',
     href: '/dashboard/audit',
-    icon: Shield,
+    icon: Bell,
     requiredPermissions: ['audit:read'],
   },
   {
@@ -83,7 +89,7 @@ const navigation: NavItem[] = [
 
 function Sidebar({ className = '' }: { className?: string }) {
   const { user, logout } = useAuth()
-  const { hasAnyPermission, getUserRole } = usePermissions()
+  const { hasAnyPermission, getUserRole, permissionsLoaded } = usePermissions()
 
   const handleLogout = async () => {
     try {
@@ -95,7 +101,8 @@ function Sidebar({ className = '' }: { className?: string }) {
     }
   }
 
-  const filteredNavigation = navigation.filter(item => {
+  // Filter navigation based on permissions (only when permissions are loaded)
+  const filteredNavigation = permissionsLoaded ? navigation.filter(item => {
     // Check role access
     if (item.requiredRoles) {
       const userRole = getUserRole()
@@ -112,7 +119,7 @@ function Sidebar({ className = '' }: { className?: string }) {
     }
 
     return true
-  })
+  }) : []
 
   return (
     <div className={`flex flex-col h-full ${className}`}>
@@ -197,6 +204,20 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const { loading: authLoading } = useAuth()
+  const { loading: permissionsLoading, permissionsLoaded } = usePermissions()
+
+  // Show loading screen while auth or permissions are loading
+  if (authLoading || permissionsLoading || !permissionsLoaded) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4" />
+          <p className="text-gray-600">Cargando permisos...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">

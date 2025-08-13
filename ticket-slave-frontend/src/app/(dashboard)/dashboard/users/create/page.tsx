@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ProtectedRoute } from '@/components/auth/protected-route'
-import { usersAPI, rbacAPI } from '@/lib/api'
+import { authAPI, rbacAPI } from '@/lib/api'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -65,7 +65,17 @@ export default function CreateUserPage() {
 
     try {
       setLoading(true)
-      await usersAPI.createUser(formData)
+      // Usar authAPI.register en lugar de usersAPI.createUser
+      await authAPI.register({
+        nombre: formData.nombre,
+        apellido: formData.apellido,
+        email: formData.email,
+        password: formData.password,
+        roleId: formData.roleId,
+        fechaNacimiento: formData.fechaNacimiento || '',
+        pais: formData.pais || '',
+        aceptaTerminos: true // Siempre true para usuarios creados por admin
+      })
       toast.success('Usuario creado exitosamente')
       router.push('/dashboard/users')
     } catch (error: unknown) {

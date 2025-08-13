@@ -5,7 +5,7 @@ export interface User {
   apellido: string
   email: string
   password?: string // Only for creation/update
-  status: 'active' | 'inactive'
+  status: 'activo' | 'inactivo'
   fechaNacimiento?: string
   pais?: string
   aceptaTerminos: boolean
@@ -48,7 +48,8 @@ export interface Role {
   id: string
   nombre: 'admin' | 'organizer' | 'customer'
   descripcion: string
-  permissions?: Permission[]
+  permissions?: Permission[]  // Incluido en GET /roles/:id
+  users?: User[]             // Incluido en GET /roles/:id
   createdAt: string
   updatedAt?: string
 }
@@ -57,9 +58,17 @@ export interface Permission {
   id: string
   nombre: string
   descripcion: string
-  module: 'users' | 'events' | 'tickets' | 'rbac' | 'reports'
-  action: 'create' | 'read' | 'update' | 'delete' | 'manage'
-  scope: 'own' | 'any' | 'none'
+  roles?: Role[]  // Incluido en GET /permissions/:id
+  RoleHasPermission?: {  // Incluido cuando viene de relación
+    id: string
+    roleId: string
+    permissionId: string
+    createdAt: string
+  }
+  // Campos opcionales para categorización
+  module?: 'users' | 'events' | 'tickets' | 'rbac' | 'reports'
+  action?: 'create' | 'read' | 'update' | 'delete' | 'manage'
+  scope?: 'own' | 'any' | 'none'
   createdAt: string
 }
 
@@ -93,6 +102,7 @@ export interface UserFilters {
   limit?: number
 }
 
+// Nota: Para crear usuarios usar authAPI.register, no usersAPI.createUser
 export interface CreateUserRequest {
   nombre: string
   apellido: string
@@ -113,7 +123,7 @@ export interface UpdateUserRequest {
   telefono?: string
   direccion?: string
   ciudad?: string
-  status?: 'active' | 'inactive'
+  status?: 'activo' | 'inactivo'
   roleId?: string
 }
 
@@ -444,11 +454,12 @@ export interface AdminDashboardStats {
     count: number
   }>
   inactiveUsers?: number
-  usersByRole?: UsersByRole
+  usersByRole?: Record<string, number> // Más flexible que UsersByRole
   recentRegistrations?: number
   dailyRegistrations?: DailyRegistration[]
   topCountries?: CountryStats[]
   userGrowth?: GrowthStats[]
+  users?: User[] // Para actividad reciente
 }
 
 export interface UsersByRole {
@@ -556,4 +567,13 @@ export interface ImportError {
   field: string
   message: string
   value: unknown
+}
+
+// Activity Types
+export interface RecentActivity {
+  id: string
+  user: string
+  action: string
+  time: string
+  timestamp: string
 }

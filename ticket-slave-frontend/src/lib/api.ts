@@ -1,5 +1,5 @@
 import axios, { AxiosResponse } from 'axios'
-import type { EventCreateRequest, EventUpdateRequest, OrderCreateRequest } from '@/types'
+import type { EventCreateRequest, EventUpdateRequest, OrderCreateRequest, User, Role } from '@/types'
 
 // Kong Gateway base URL
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
@@ -104,22 +104,9 @@ export const usersAPI = {
   // GET /api/v1/users - VERIFICADO en HAR
   getUsers: () => api.get('/api/v1/users'),
   
-  // GET /users/{id} - VERIFICADO en HAR (sin /api/v1/)
+  // GET /api/v1/users/{id} - VERIFICADO en HAR
   getUser: (id: string) =>
-    api.get(`/users/${id}`),
-  
-  // POST /api/v1/users - NO está en el HAR, pero necesario para crear usuarios
-  createUser: (userData: {
-    nombre: string
-    apellido: string
-    email: string
-    password: string
-    roleId: string
-    fechaNacimiento?: string
-    pais?: string
-    aceptaTerminos?: boolean
-    status?: 'active' | 'inactive'
-  }) => api.post('/api/v1/users', userData),
+    api.get(`/api/v1/users/${id}`),
   
   // PATCH /api/v1/users/{id} - VERIFICADO en HAR
   updateUser: (id: string, userData: {
@@ -128,13 +115,13 @@ export const usersAPI = {
     email?: string
     fechaNacimiento?: string
     pais?: string
-    status?: 'active' | 'inactive'
+    status?: 'activo' | 'inactivo'
     roleId?: string
   }) => api.patch(`/api/v1/users/${id}`, userData),
   
   // DELETE /users/{id} - VERIFICADO en HAR (sin /api/v1/)
   deleteUser: (id: string) =>
-    api.delete(`/users/${id}`),
+    api.delete(`/api/v1/users/${id}`),
   
   // POST /api/v1/users/{id}/role - VERIFICADO en HAR
   assignRole: (userId: string, roleId: string) =>
@@ -142,7 +129,7 @@ export const usersAPI = {
   
   // GET /users/{id}/role - VERIFICADO en HAR (sin /api/v1/)
   getUserRole: (userId: string) =>
-    api.get(`/users/${userId}/role`),
+    api.get(`/api/v1/users/${userId}/role`),
 }
 
 // Roles and Permissions Management (ms-usuarios) - SOLO endpoints que existen en el HAR
@@ -202,22 +189,121 @@ export const rbacAPI = {
 
 // Dashboard and Analytics (ms-usuarios)
 export const dashboardAPI = {
-  // Estadísticas simplificadas basadas en los datos del HAR
-  getAdminStats: () => {
-    // Mock data basado en la estructura de usuarios del HAR
-    return Promise.resolve({
-      data: {
-        totalUsers: 3,
-        activeUsers: 3,
-        totalRoles: 3,
-        totalPermissions: 15,
-        roleDistribution: [
-          { role: 'admin', count: 1 },
-          { role: 'organizer', count: 1 },
-          { role: 'customer', count: 1 }
-        ]
+  // Estadísticas reales basadas en los endpoints disponibles
+  getAdminStats: async () => {
+    try {
+      // Obtener todos los usuarios para calcular estadísticas
+      const usersResponse = await api.get('/api/v1/users')
+      const users = usersResponse.data
+
+      console.log('Users data:', JSON.stringify(users, null, 2))
+
+      // Obtener todos los roles para mapear roleId a nombre
+      const rolesResponse = await api.get('/api/v1/roles')
+      const roles = rolesResponse.data
+
+      console.log('Roles data:', JSON.stringify(roles, null, 2))
+
+      // Obtener todos los permisos
+      const permissionsResponse = await api.get('/api/v1/permissions')
+      const permissions = permissionsResponse.data
+
+      // Crear un mapa de roleId a nombre de rol
+      const roleMap: Record<string, string> = {}
+      roles.forEach((role: Role) => {
+        roleMap[role.id] = role.nombre
+      })
+
+      // Calcular estadísticas
+      const totalUsers = users.length
+      const activeUsers = users.filter((user: User) => user.status === 'activo').length
+      const inactiveUsers = users.filter((user: User) => user.status === 'inactivo').length
+
+      // Calcular registros recientes (último mes)
+      const oneMonthAgo = new Date()
+      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1)
+      const recentRegistrations = users.filter((user: User) => {
+        if (user.createdAt) {
+          return new Date(user.createdAt) > oneMonthAgo
+        }
+        return false
+      }).length
+
+      // Contar usuarios por rol usando roleId
+      const usersByRole: Record<string, number> = {}
+      users.forEach((user: User) => {
+        if (user.roleId && roleMap[user.roleId]) {
+          const roleName = roleMap[user.roleId]
+          usersByRole[roleName] = (usersByRole[roleName] || 0) + 1
+        }
+      })
+
+      console.log('Users by role:', JSON.stringify(usersByRole, null, 2))
+
+      // Distribución de roles para gráficos
+      const roleDistribution = Object.entries(usersByRole).map(([role, count]) => ({
+        role,
+        count
+      }))
+
+      return {
+        data: {
+          totalUsers,
+          activeUsers,
+          inactiveUsers,
+          recentRegistrations,
+          totalRoles: roles.length,
+          totalPermissions: permissions.length,
+          usersByRole,
+          roleDistribution,
+          users: users.slice(0, 5), // Últimos 5 usuarios para actividad reciente
+        }
       }
-    })
+    } catch (error) {
+      console.error('Error fetching admin stats:', JSON.stringify(error, null, 2))
+      // Fallback con datos básicos
+      return {
+        data: {
+          totalUsers: 0,
+          activeUsers: 0,
+          inactiveUsers: 0,
+          recentRegistrations: 0,
+          totalRoles: 0,
+          totalPermissions: 0,
+          usersByRole: {},
+          roleDistribution: [],
+          users: [],
+        }
+      }
+    }
+  },
+
+  // Obtener actividad reciente
+  getRecentActivity: async () => {
+    try {
+      // Por ahora usamos la lista de usuarios como actividad reciente
+      const usersResponse = await api.get('/api/v1/users')
+      const users = usersResponse.data
+
+      // Simular actividad reciente basada en usuarios
+      const recentActivity = users.slice(0, 10).map((user: User, index: number) => ({
+        id: user.id,
+        user: `${user.nombre} ${user.apellido}`,
+        action: index % 3 === 0 ? 'Nuevo registro' : 
+               index % 3 === 1 ? 'Perfil actualizado' : 'Login reciente',
+        time: `Hace ${Math.floor(Math.random() * 60)} minutos`,
+        timestamp: new Date().toISOString()
+      }))
+
+      return {
+        data: recentActivity
+      }
+    } catch (error) {
+      console.error('Error fetching recent activity:', error)
+      return {
+        data: []
+      }
+    }
   },
   
   // Recent activities mock

@@ -1,36 +1,94 @@
 'use client'
 
+import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from './use-auth'
-import type { Permission } from '@/types'
+import { usersAPI, rbacAPI } from '@/lib/api'
+import type { Permission, Role } from '@/types'
 
 export function usePermissions() {
   const { user, isAdmin, isOrganizer, isCustomer } = useAuth()
+  const [userPermissions, setUserPermissions] = useState<Permission[]>([])
+  const [userRole, setUserRole] = useState<Role | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [permissionsLoaded, setPermissionsLoaded] = useState(false)
+
+  // Fetch user's detailed role and permissions from backend
+  const fetchUserPermissions = useCallback(async () => {
+    if (!user?.id) {
+      setLoading(false)
+      return
+    }
+
+    try {
+      setLoading(true)
+      
+      // 1. Get detailed user info with role (según HAR: GET /users/:id incluye rol)
+      const userResponse = await usersAPI.getUser(user.id)
+      const detailedUser = userResponse.data
+      
+      if (detailedUser.role) {
+        setUserRole(detailedUser.role)
+        
+        // 2. Get detailed role with permissions (según HAR: GET /roles/:id incluye permisos)
+        const roleResponse = await rbacAPI.getRole(detailedUser.role.id)
+        const detailedRole = roleResponse.data
+        
+        if (detailedRole.permissions) {
+          setUserPermissions(detailedRole.permissions)
+        }
+      }
+      
+      setPermissionsLoaded(true)
+    } catch (error) {
+      console.error('Error fetching user permissions:', error)
+      // Fallback: usar información básica del usuario si existe
+      if (user?.role) {
+        setUserRole(user.role)
+        setUserPermissions(user.role.permissions || [])
+      }
+      setPermissionsLoaded(true)
+    } finally {
+      setLoading(false)
+    }
+  }, [user?.id, user?.role])
+
+  // Fetch permissions when user changes
+  useEffect(() => {
+    if (user) {
+      fetchUserPermissions()
+    } else {
+      setUserPermissions([])
+      setUserRole(null)
+      setPermissionsLoaded(false)
+      setLoading(false)
+    }
+  }, [user, fetchUserPermissions])
 
   // Check if user has a specific permission
-  const hasPermission = (permissionName: string): boolean => {
-    if (!user?.role?.permissions) return false
+  const hasPermission = useCallback((permissionName: string): boolean => {
+    if (!permissionsLoaded) return false // No permitir hasta que se carguen
     
     // Admin has all permissions
     if (isAdmin) return true
     
-    return user.role.permissions.some(
+    return userPermissions.some(
       (permission: Permission) => permission.nombre === permissionName
     )
-  }
+  }, [userPermissions, isAdmin, permissionsLoaded])
 
   // Check if user has any of the specified permissions
-  const hasAnyPermission = (permissionNames: string[]): boolean => {
+  const hasAnyPermission = useCallback((permissionNames: string[]): boolean => {
     return permissionNames.some(permission => hasPermission(permission))
-  }
+  }, [hasPermission])
 
   // Check if user has all of the specified permissions
-  const hasAllPermissions = (permissionNames: string[]): boolean => {
+  const hasAllPermissions = useCallback((permissionNames: string[]): boolean => {
     return permissionNames.every(permission => hasPermission(permission))
-  }
+  }, [hasPermission])
 
   // Check if user can perform action on resource
-  const canPerform = (action: string, resource: string, scope: 'own' | 'any' = 'any'): boolean => {
-    if (!user) return false
+  const canPerform = useCallback((action: string, resource: string, scope: 'own' | 'any' = 'any'): boolean => {
+    if (!user || !permissionsLoaded) return false
     
     // Admin can do everything
     if (isAdmin) return true
@@ -39,7 +97,7 @@ export function usePermissions() {
     const permissionName = `${resource}:${action}${scope === 'own' ? ':own' : ''}`
     
     return hasPermission(permissionName)
-  }
+  }, [user, isAdmin, hasPermission, permissionsLoaded])
 
   // Specific permission checks for common operations
   const permissions = {
@@ -83,14 +141,19 @@ export function usePermissions() {
     canViewAuditLogs: () => hasPermission('audit:read') || isAdmin,
   }
 
-  // Get user's permissions list
+  // Get user's permissions list (from backend)
   const getUserPermissions = (): Permission[] => {
-    return user?.role?.permissions || []
+    return userPermissions
   }
 
-  // Get user's role name
+  // Get user's role name (from backend)
   const getUserRole = (): string | undefined => {
-    return user?.role?.nombre
+    return userRole?.nombre
+  }
+
+  // Refresh permissions from backend
+  const refreshPermissions = () => {
+    fetchUserPermissions()
   }
 
   return {
@@ -101,10 +164,13 @@ export function usePermissions() {
     permissions,
     getUserPermissions,
     getUserRole,
+    refreshPermissions,
     user,
     isAdmin,
     isOrganizer,
     isCustomer,
+    loading,
+    permissionsLoaded,
   }
 }
 

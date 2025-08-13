@@ -23,17 +23,17 @@ export function ProtectedRoute({
   fallback,
   redirectTo
 }: ProtectedRouteProps) {
-  const { user, loading, isAuthenticated } = useAuth()
-  const { hasAllPermissions, getUserRole } = usePermissions()
+  const { user, loading: authLoading, isAuthenticated } = useAuth()
+  const { hasAllPermissions, getUserRole, loading: permissionsLoading, permissionsLoaded } = usePermissions()
 
   useEffect(() => {
-    if (!loading && !isAuthenticated && redirectTo) {
+    if (!authLoading && !isAuthenticated && redirectTo) {
       window.location.href = redirectTo
     }
-  }, [loading, isAuthenticated, redirectTo])
+  }, [authLoading, isAuthenticated, redirectTo])
 
-  // Show loading state
-  if (loading) {
+  // Show loading state while auth or permissions are loading
+  if (authLoading || permissionsLoading || !permissionsLoaded) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
